@@ -1,59 +1,54 @@
 from z3 import *
 
-NUMBER_OF_CARDS = 8
+NUMBER_OF_CARDS = 12
 NUMBER_OF_PLAYERS = 2
+assert NUMBER_OF_CARDS % NUMBER_OF_PLAYERS == 0
 NUMBER_OF_TRICKS = NUMBER_OF_CARDS // NUMBER_OF_PLAYERS
 
-# hand_of_player = [Const('a', SetSort(IntSort())), Const('b', SetSort(IntSort()))]
-# SetAdd(hand_of_player[0], 1)
-# SetAdd(hand_of_player[0], 3)
-# SetAdd(hand_of_player[0], 5)
-# SetAdd(hand_of_player[0], 6)
-#
-# SetAdd(hand_of_player[1], 2)
-# SetAdd(hand_of_player[1], 4)
-# SetAdd(hand_of_player[1], 7)
-# SetAdd(hand_of_player[1], 8)
-#
-# print(hand_of_player[0])
+PLAYER_HANDS = ((1, 3, 5, 6, 9, 10), (2, 4, 7, 8, 11, 12))
 
-cards_played = [ [ Int( "c_%s_%s" % (i, j)) for i in range(NUMBER_OF_PLAYERS) ] for j in range(NUMBER_OF_TRICKS) ]
 
-print(cards_played)
+def print_table_row(index: int, cards_played: list, winner: int):
+    column_separator = '  |  '
+
+    def print_row(index, cards_played, winner):
+        print(column_separator.join([f'{index!s:^5}'] +
+                                    [f'{card!s:>2}' for card in cards_played] +
+                                    [f'{winner!s:^6}']))
+
+    if index == 1:
+        print_row('Trick', [f'P{i + 1}' for i in range(NUMBER_OF_PLAYERS)],
+                  'Winner')
+        print('-' * (16 + NUMBER_OF_PLAYERS * (2 + len(column_separator))))
+    print_row(index, cards_played, winner)
+
+
+cards = [[Int("c_%s_%s" % (i, j)) for i in range(NUMBER_OF_PLAYERS)] for
+         j in range(NUMBER_OF_TRICKS)]
+trick_won = [Bool("t_%s" % i) for i in range(NUMBER_OF_TRICKS)]
 
 s = Solver()
 
-print(*[card for trick in cards_played for card in trick])
-
-s.add(Distinct(*[card for trick in cards_played for card in trick]))
-
-p = [ (1,3,5,6), (2,4,7,8)]
+s.add(Distinct(*[card for trick in cards for card in trick]))
 
 for j in range(NUMBER_OF_TRICKS):
+
     for i in range(NUMBER_OF_PLAYERS):
-        s.add(cards_played[j][i] > 0)
-        s.add(cards_played[j][i] <= NUMBER_OF_CARDS)
-        #s.add(IsMember(cards_played[j][i], hand_of_player[i]))
-        s.add(Or([cards_played[j][i] == card for card in p[i]]))
+        card = cards[j][i]
+        s.add(card > 0)
+        s.add(card <= NUMBER_OF_CARDS)
+        s.add(Or([card == c for c in PLAYER_HANDS[i]]))
 
-
-
-
-trick_won = [ Bool( "t_%s" % i) for i in range(NUMBER_OF_TRICKS)]
-
-for j in range(NUMBER_OF_TRICKS):
-    s.add(Implies(cards_played[j][0] < cards_played[j][1], trick_won[j]))
-    s.add(Implies(cards_played[j][0] > cards_played[j][1], Not(trick_won[j])))
+    s.add(Implies(cards[j][0] < cards[j][1], trick_won[j]))
+    s.add(Implies(cards[j][0] > cards[j][1], Not(trick_won[j])))
 
 if s.check() == sat:
+
     m = s.model()
 
     for j in range(NUMBER_OF_TRICKS):
-        print(f'Trick {j}:')
-        print(f'{m.evaluate(cards_played[j][0])}\t{m.evaluate(cards_played[j][1])}')
-        if m.evaluate(trick_won[j]):
-            print('Player 1 won')
-        else:
-            print('Player 0 won')
+        played = [m.evaluate(cards[j][i]) for i in range(NUMBER_OF_PLAYERS)]
+        trick_winner = m.evaluate(trick_won[j])
+        print_table_row(j + 1, played, trick_winner)
 else:
     print('unsat')
