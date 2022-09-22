@@ -19,18 +19,28 @@ def deal_cards() -> list:
     return hands
 
 
-def print_table_row(index: int, cards_played: list, winner: int):
-    column_separator = '  |  '
+COLUMN_SEPARATOR = ' | '
+TRICK_HEADER = 'Trick'
+PLAYER_HEADER = 'P'
+WINNER_HEADER = 'Winner'
+COLUMN_WIDTH = max(len(str(NUMBER_OF_CARDS)), len(PLAYER_HEADER +
+                                                  str(NUMBER_OF_PLAYERS)))
+TRICK_COLUMN_WIDTH = max(len(str(NUMBER_OF_TRICKS)), len(TRICK_HEADER))
+WINNER_COLUMN_WIDTH = max(len(str(NUMBER_OF_PLAYERS)), len(WINNER_HEADER))
+TOTAL_WIDTH = TRICK_COLUMN_WIDTH + WINNER_COLUMN_WIDTH + len(COLUMN_SEPARATOR) \
+              + NUMBER_OF_PLAYERS * (COLUMN_WIDTH + len(COLUMN_SEPARATOR))
 
-    def print_row(index, cards_played, winner):
-        print(column_separator.join([f'{index!s:^5}'] +
-                                    [f'{card!s:>2}' for card in cards_played] +
-                                    [f'{winner!s:^6}']))
+
+def print_table_row(index: int, cards_played: list, winner: int) -> None:
+    def print_row(i, cs, w):
+        print(COLUMN_SEPARATOR.join([f'{i!s:^{TRICK_COLUMN_WIDTH}}'] +
+                                    [f'{c!s:>{COLUMN_WIDTH}}' for c in cs] +
+                                    [f'{w!s:^{WINNER_COLUMN_WIDTH}}']))
 
     if index == 1:
-        print_row('Trick', [f'P{i + 1}' for i in range(NUMBER_OF_PLAYERS)],
-                  'Winner')
-        print('-' * (16 + NUMBER_OF_PLAYERS * (2 + len(column_separator))))
+        print_row(TRICK_HEADER, [f'{PLAYER_HEADER}{i + 1}' for i in range(
+            NUMBER_OF_PLAYERS)], WINNER_HEADER)
+        print('-' * TOTAL_WIDTH)
     print_row(index, cards_played, winner)
 
 
@@ -38,10 +48,9 @@ def print_table_row(index: int, cards_played: list, winner: int):
 player_hands = deal_cards()
 print(f'Card distribution: {player_hands}')
 
-
-cards = [[Int("c_%s_%s" % (i, j)) for i in range(NUMBER_OF_PLAYERS)] for
+cards = [[Int('c_%s_%s' % (i, j)) for i in range(NUMBER_OF_PLAYERS)] for
          j in range(NUMBER_OF_TRICKS)]
-trick_won = [Bool("t_%s" % i) for i in range(NUMBER_OF_TRICKS)]
+trick_won = [Bool('t_%s' % i) for i in range(NUMBER_OF_TRICKS)]
 
 s = Solver()
 
