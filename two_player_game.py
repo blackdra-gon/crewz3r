@@ -31,7 +31,7 @@ TOTAL_WIDTH = TRICK_COLUMN_WIDTH + WINNER_COLUMN_WIDTH + len(COLUMN_SEPARATOR) \
               + NUMBER_OF_PLAYERS * (COLUMN_WIDTH + len(COLUMN_SEPARATOR))
 
 
-def print_table_row(index: int, cards_played: list, winner: int) -> None:
+def print_table_row(index: int, cards_played: list, trick_winner: int) -> None:
     def print_row(i, cs, w):
         print(COLUMN_SEPARATOR.join([f'{i!s:^{TRICK_COLUMN_WIDTH}}'] +
                                     [f'{c!s:>{COLUMN_WIDTH}}' for c in cs] +
@@ -41,39 +41,43 @@ def print_table_row(index: int, cards_played: list, winner: int) -> None:
         print_row(TRICK_HEADER, [f'{PLAYER_HEADER}{i + 1}' for i in range(
             NUMBER_OF_PLAYERS)], WINNER_HEADER)
         print('-' * TOTAL_WIDTH)
-    print_row(index, cards_played, winner)
+    print_row(index, cards_played, trick_winner)
 
 
-# player_hands = ((1, 3, 5, 6, 9, 10), (2, 4, 7, 8, 11, 12))
-player_hands = deal_cards()
-print(f'Card distribution: {player_hands}')
+def main():
+    player_hands = deal_cards()
+    print(f'Card distribution: {player_hands}')
 
-cards = [[Int('c_%s_%s' % (i, j)) for i in range(NUMBER_OF_PLAYERS)] for
-         j in range(NUMBER_OF_TRICKS)]
-trick_won = [Bool('t_%s' % i) for i in range(NUMBER_OF_TRICKS)]
+    cards = [[Int('c_%s_%s' % (i, j)) for i in range(NUMBER_OF_PLAYERS)] for
+             j in range(NUMBER_OF_TRICKS)]
+    trick_won = [Bool('t_%s' % i) for i in range(NUMBER_OF_TRICKS)]
 
-s = Solver()
+    s = Solver()
 
-s.add(Distinct(*[card for trick in cards for card in trick]))
-
-for j in range(NUMBER_OF_TRICKS):
-
-    for i in range(NUMBER_OF_PLAYERS):
-        card = cards[j][i]
-        s.add(card > 0)
-        s.add(card <= NUMBER_OF_CARDS)
-        s.add(Or([card == c for c in player_hands[i]]))
-
-    s.add(Implies(cards[j][0] < cards[j][1], trick_won[j]))
-    s.add(Implies(cards[j][0] > cards[j][1], Not(trick_won[j])))
-
-if s.check() == sat:
-
-    m = s.model()
+    s.add(Distinct(*[card for trick in cards for card in trick]))
 
     for j in range(NUMBER_OF_TRICKS):
-        played = [m.evaluate(cards[j][i]) for i in range(NUMBER_OF_PLAYERS)]
-        trick_winner = m.evaluate(trick_won[j])
-        print_table_row(j + 1, played, trick_winner)
-else:
-    print('unsat')
+
+        for i in range(NUMBER_OF_PLAYERS):
+            card = cards[j][i]
+            s.add(card > 0)
+            s.add(card <= NUMBER_OF_CARDS)
+            s.add(Or([card == c for c in player_hands[i]]))
+
+        s.add(Implies(cards[j][0] < cards[j][1], trick_won[j]))
+        s.add(Implies(cards[j][0] > cards[j][1], Not(trick_won[j])))
+
+    if s.check() == sat:
+
+        m = s.model()
+
+        for j in range(NUMBER_OF_TRICKS):
+            played = [m.evaluate(cards[j][i]) for i in range(NUMBER_OF_PLAYERS)]
+            winner = m.evaluate(trick_won[j])
+            print_table_row(j + 1, played, winner)
+    else:
+        print('unsat')
+
+
+if __name__ == '__main__':
+    main()
