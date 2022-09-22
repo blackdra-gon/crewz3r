@@ -15,6 +15,7 @@ def deal_cards() -> list:
         hand = random.sample(remaining_cards, NUMBER_OF_TRICKS)
         for card in hand:
             remaining_cards.remove(card)
+        hand.sort()
         hands.append(hand)
     return hands
 
