@@ -1,3 +1,5 @@
+import random
+
 from z3 import *
 
 NUMBER_OF_CARDS = 12
@@ -5,7 +7,16 @@ NUMBER_OF_PLAYERS = 2
 assert NUMBER_OF_CARDS % NUMBER_OF_PLAYERS == 0
 NUMBER_OF_TRICKS = NUMBER_OF_CARDS // NUMBER_OF_PLAYERS
 
-PLAYER_HANDS = ((1, 3, 5, 6, 9, 10), (2, 4, 7, 8, 11, 12))
+
+def deal_cards() -> list:
+    remaining_cards = list(range(1, NUMBER_OF_CARDS + 1))
+    hands = []
+    for i in range(NUMBER_OF_PLAYERS):
+        hand = random.sample(remaining_cards, NUMBER_OF_TRICKS)
+        for card in hand:
+            remaining_cards.remove(card)
+        hands.append(hand)
+    return hands
 
 
 def print_table_row(index: int, cards_played: list, winner: int):
@@ -23,6 +34,11 @@ def print_table_row(index: int, cards_played: list, winner: int):
     print_row(index, cards_played, winner)
 
 
+# player_hands = ((1, 3, 5, 6, 9, 10), (2, 4, 7, 8, 11, 12))
+player_hands = deal_cards()
+print(f'Card distribution: {player_hands}')
+
+
 cards = [[Int("c_%s_%s" % (i, j)) for i in range(NUMBER_OF_PLAYERS)] for
          j in range(NUMBER_OF_TRICKS)]
 trick_won = [Bool("t_%s" % i) for i in range(NUMBER_OF_TRICKS)]
@@ -37,7 +53,7 @@ for j in range(NUMBER_OF_TRICKS):
         card = cards[j][i]
         s.add(card > 0)
         s.add(card <= NUMBER_OF_CARDS)
-        s.add(Or([card == c for c in PLAYER_HANDS[i]]))
+        s.add(Or([card == c for c in player_hands[i]]))
 
     s.add(Implies(cards[j][0] < cards[j][1], trick_won[j]))
     s.add(Implies(cards[j][0] > cards[j][1], Not(trick_won[j])))
