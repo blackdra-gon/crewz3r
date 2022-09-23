@@ -73,15 +73,15 @@ def main():
 
     # A card is represented by two integers.
     # The first represents the colour, the second the card value.
-    cards = [[IntVector('c_%s_%s' % (i, j), 2)
-              for i in range(NUMBER_OF_PLAYERS)]
-             for j in range(NUMBER_OF_TRICKS)]
+    cards = [[IntVector('card_%s_%s' % (j, i), 2)
+              for i in range(1, NUMBER_OF_PLAYERS + 1)]
+             for j in range(1, NUMBER_OF_TRICKS + 1)]
 
     # Lists of integers store the starting player, active colour and winner
     # for each trick.
-    starting_players = [Int('s_%s' % i) for i in range(NUMBER_OF_TRICKS)]
-    active_colours = [Int('a_%s' % i) for i in range(NUMBER_OF_TRICKS)]
-    trick_winners = [Int('w_%s' % i) for i in range(NUMBER_OF_TRICKS)]
+    starting_players = [Int('s_%s' % i) for i in range(1, NUMBER_OF_TRICKS + 1)]
+    active_colours = [Int('a_%s' % i) for i in range(1, NUMBER_OF_TRICKS + 1)]
+    trick_winners = [Int('w_%s' % i) for i in range(1, NUMBER_OF_TRICKS + 1)]
 
     s = Solver()
 
