@@ -1,4 +1,5 @@
 import random
+import time
 
 from z3 import *
 
@@ -186,7 +187,15 @@ def main():
         add_card_task(i)
     add_special_task_no_tricks_value(CARD_MAX_VALUE)
 
+    def timing_info(start_time):
+        duration = time.time() - start_time
+        print(f'\nSolving took {int(duration // 60)}m {duration % 60:.1f}s.',)
+
+    start_check = time.time()
+
     if s.check() == sat:
+
+        timing_info(start_check)
 
         m = s.model()
 
@@ -206,7 +215,8 @@ def main():
         print_table(COLUMN_HEADERS, table_lines, CONTENT_WIDTHS, ' | ')
 
     else:
-        print('unsat')
+        timing_info(start_check)
+        print('No solution exists.')
 
 
 if __name__ == '__main__':
