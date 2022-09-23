@@ -31,7 +31,7 @@ def deal_cards(print_distribution: bool = True) -> list[list[tuple[int, int]]]:
 
 
 COLUMN_SEPARATOR = ' | '
-PLAYER_PREFIX = 'P'
+PLAYER_PREFIX = 'Player '
 
 COLUMN_HEADERS = ['Trick', '*', 'A'] + \
                  [f'{PLAYER_PREFIX}{i + 1}'
@@ -169,8 +169,22 @@ def main():
                   f'{COLOUR_NAMES[card[0]]:{COLOUR_NAME_WIDTH}} ' +
                   f'{card[1]:>{CARD_VALUE_WIDTH}}')
 
+    def add_special_task_no_tricks_value(
+            forbidden_value: int, print_task: bool = True):
+        assert 0 < forbidden_value <= CARD_MAX_VALUE
+        # No trick may be won with a card of the given value.
+        for j in range(NUMBER_OF_TRICKS):
+            for i in range(NUMBER_OF_PLAYERS):
+                s.add(Implies(cards[j][i][1] == forbidden_value,
+                              cards[j][i][0] != active_colours[j]))
+
+        if print_task:
+            print('Special task: No tricks may be won ' +
+                  f'with cards of value {forbidden_value}.')
+
     for i in range(1, NUMBER_OF_PLAYERS + 1):
         add_card_task(i)
+    add_special_task_no_tricks_value(CARD_MAX_VALUE)
 
     if s.check() == sat:
 
