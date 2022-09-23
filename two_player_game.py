@@ -10,7 +10,7 @@ assert NUMBER_OF_CARDS % NUMBER_OF_PLAYERS == 0
 NUMBER_OF_TRICKS = NUMBER_OF_CARDS // NUMBER_OF_PLAYERS
 
 
-def deal_cards() -> list:
+def deal_cards(print_distribution: bool = True) -> list[list[tuple[int, int]]]:
     remaining_cards = [(color, value) for color in range(NUMBER_OF_COLOURS)
                        for value in range(1, CARD_MAX_VALUE + 1)]
     hands = []
@@ -20,75 +20,56 @@ def deal_cards() -> list:
             remaining_cards.remove(card)
         hand.sort()
         hands.append(hand)
+
+    if print_distribution:
+        print('\nCard distribution:')
+        for i, cs in enumerate(hands):
+            print(f'{PLAYER_PREFIX}{i + 1}: ', end='')
+            print(', '.join([f'({COLOUR_NAMES[c[0]]:{COLOUR_NAME_WIDTH}} ' +
+                             f'{c[1]:>{CARD_VALUE_WIDTH}})' for c in cs]))
     return hands
 
 
 COLUMN_SEPARATOR = ' | '
-TRICK_HEADER = 'Trick'
-STARTING_HEADER = '*'
-ACTIVE_HEADER = 'A'
 PLAYER_PREFIX = 'P'
-WINNER_HEADER = 'Winner'
-COLOUR_NAMES = ('R', 'G', 'B', 'Y', '')  # Empty string is used for headers.
-assert NUMBER_OF_COLOURS < len(COLOUR_NAMES)
+
+COLUMN_HEADERS = ['Trick', '*', 'A'] + \
+                 [f'{PLAYER_PREFIX}{i + 1}'
+                  for i in range(NUMBER_OF_PLAYERS)] + \
+                 ['Winner']
+
+COLOUR_NAMES = ('R', 'G', 'B', 'Y')
+assert NUMBER_OF_COLOURS <= len(COLOUR_NAMES)
 COLOUR_NAME_WIDTH = max(map(len, COLOUR_NAMES[:NUMBER_OF_COLOURS]))
 CARD_VALUE_WIDTH = len(str(CARD_MAX_VALUE))
-COLUMN_WIDTH = max(COLOUR_NAME_WIDTH + 1 + CARD_VALUE_WIDTH,
-                   len(PLAYER_PREFIX + str(NUMBER_OF_PLAYERS)))
-TRICK_COLUMN_WIDTH = max(len(str(NUMBER_OF_TRICKS)), len(TRICK_HEADER))
-STARTING_COLUMN_WIDTH = max(len(str(NUMBER_OF_PLAYERS) + PLAYER_PREFIX),
-                            len(STARTING_HEADER))
-ACTIVE_COLUMN_WIDTH = max(len(ACTIVE_HEADER), COLOUR_NAME_WIDTH)
-WINNER_COLUMN_WIDTH = max(len(str(NUMBER_OF_PLAYERS) + PLAYER_PREFIX),
-                          len(WINNER_HEADER))
-TOTAL_WIDTH = TRICK_COLUMN_WIDTH + STARTING_COLUMN_WIDTH + ACTIVE_COLUMN_WIDTH \
-              + NUMBER_OF_PLAYERS * (COLUMN_WIDTH + len(COLUMN_SEPARATOR)) \
-              + WINNER_COLUMN_WIDTH + (3 * len(COLUMN_SEPARATOR))
+
+CONTENT_WIDTHS = [len(str(NUMBER_OF_TRICKS)),
+                  len(PLAYER_PREFIX + str(NUMBER_OF_PLAYERS)),
+                  COLOUR_NAME_WIDTH] + \
+                 [COLOUR_NAME_WIDTH + 1 + CARD_VALUE_WIDTH] * \
+                 NUMBER_OF_PLAYERS + \
+                 [len(PLAYER_PREFIX + str(NUMBER_OF_PLAYERS))]
 
 
-def print_table_row(index: int, starting_player: int, active_colour: int,
-                    cards_played: list, trick_winner: int) -> None:
-    def card_repr(cards):
-        cr = []
-        for card in cards:
-            r = f'{COLOUR_NAMES[card[0]]:{COLOUR_NAME_WIDTH}} ' + \
-                f'{card[1]:>{CARD_VALUE_WIDTH}}'
-            cr.append(f'{r:^{COLUMN_WIDTH}}')
-        return cr
+def print_table(headers: list[str], lines: list[list[str]],
+                content_widths: list[int], column_separator: str) -> None:
+    assert len(headers) == len(content_widths)
+    assert all([len(line) == len(headers) for line in lines])
 
-    def print_row(i, s, a, cr, w):
-        ir = [f'{i:^{TRICK_COLUMN_WIDTH}}']
-        sr = [f'{s:^{STARTING_COLUMN_WIDTH}}']
-        ar = [f'{a:^{ACTIVE_COLUMN_WIDTH}}']
-        wr = [f'{w:^{WINNER_COLUMN_WIDTH}}']
-        print(COLUMN_SEPARATOR.join(ir + sr + ar + cr + wr))
+    column_widths = list(map(max, zip(map(len, headers), content_widths)))
+    total_width = sum(column_widths, (len(headers) - 1) * len(column_separator))
 
-    # Print table header before first row.
-    if index == 1:
-        player_headers = [f'{f"{PLAYER_PREFIX}{i + 1}":{COLUMN_WIDTH}}'
-                          for i in range(NUMBER_OF_PLAYERS)]
-        print()
-        print_row(TRICK_HEADER, STARTING_HEADER, ACTIVE_HEADER,
-                  player_headers, WINNER_HEADER)
-        print('-' * TOTAL_WIDTH)
-
-    # Print regular rows.
-    print_row(index, f'{PLAYER_PREFIX}{starting_player}',
-              COLOUR_NAMES[active_colour], card_repr(cards_played),
-              f'{PLAYER_PREFIX}{trick_winner}')
-
-
-def print_card_distribution(hands):
-    print('\nCard distribution:')
-    for i, cs in enumerate(hands):
-        print(f'{PLAYER_PREFIX}{i + 1}: ', end='')
-        print(', '.join([f'({COLOUR_NAMES[c[0]]:{COLOUR_NAME_WIDTH}} ' +
-                         f'{c[1]:>{CARD_VALUE_WIDTH}})' for c in cs]))
+    print()
+    print(column_separator.join([f'{header:^{column_widths[i]}}'
+                                 for i, header in enumerate(headers)]))
+    print('-' * total_width)
+    for line in lines:
+        print(column_separator.join([f'{element:^{column_widths[i]}}'
+                                     for i, element in enumerate(line)]))
 
 
 def main():
     player_hands = deal_cards()
-    print_card_distribution(player_hands)
 
     # A card is represented by two integers.
     # The first represents the colour, the second the card value.
@@ -167,14 +148,21 @@ def main():
 
         m = s.model()
 
+        table_lines = []
         for j in range(NUMBER_OF_TRICKS):
-            starting = m.evaluate(starting_players[j]).as_long()
-            active = m.evaluate(active_colours[j]).as_long()
-            played = [(m.evaluate(cards[j][i][0]).as_long(),
-                       m.evaluate(cards[j][i][1]).as_long())
-                      for i in range(NUMBER_OF_PLAYERS)]
-            winner = m.evaluate(trick_winners[j]).as_long()
-            print_table_row(j + 1, starting, active, played, winner)
+            s = f'{PLAYER_PREFIX}{m.evaluate(starting_players[j]).as_long()}'
+            c = COLOUR_NAMES[m.evaluate(active_colours[j]).as_long()]
+            table_line = [f'{j + 1}', s, c]
+            for i in range(NUMBER_OF_PLAYERS):
+                colour = COLOUR_NAMES[m.evaluate(cards[j][i][0]).as_long()]
+                value = m.evaluate(cards[j][i][1]).as_long()
+                r = f'{colour :{COLOUR_NAME_WIDTH}} {value:>{CARD_VALUE_WIDTH}}'
+                table_line.append(r)
+            w = f'{PLAYER_PREFIX}{m.evaluate(trick_winners[j]).as_long()}'
+            table_line.append(w)
+            table_lines.append(table_line)
+        print_table(COLUMN_HEADERS, table_lines, CONTENT_WIDTHS, ' | ')
+
     else:
         print('unsat')
 
