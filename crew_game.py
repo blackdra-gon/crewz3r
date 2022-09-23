@@ -24,10 +24,9 @@ def deal_cards(print_distribution: bool = True) -> list[list[tuple[int, int]]]:
                        if USE_TRUMP_CARDS]
     hands = []
     for i in range(NUMBER_OF_PLAYERS):
-        hand = random.sample(remaining_cards, NUMBER_OF_TRICKS)
+        hand = sorted(random.sample(remaining_cards, NUMBER_OF_TRICKS))
         for card in hand:
             remaining_cards.remove(card)
-        hand.sort()
         hands.append(hand)
 
     if print_distribution:
@@ -181,51 +180,85 @@ def main():
                               for m in range(j + 1, NUMBER_OF_TRICKS)]),
                           colour == active_colour))
 
-    task_cards = []
+    tasks = []
 
     def add_card_task(tasked_player: int, card: tuple[int, int] = None,
                       print_task: bool = True) -> None:
         if card:
             assert 0 <= card[0] < NUMBER_OF_COLOURS
             assert 0 < card[1] <= CARD_MAX_VALUE
-            assert card not in task_cards
+            assert card not in tasks
         else:
             card = random.choice([c for hand in player_hands for c in hand
-                                  if c not in task_cards])
-        task_cards.append(card)
+                                  if c not in tasks and c[0] != TRUMP_COLOUR])
+        tasks.append(card)
 
         # If a trick contains the task card, that trick must be won by the
         # tasked player.
-        for i in range(NUMBER_OF_TRICKS):
+        for j in range(NUMBER_OF_TRICKS):
             s.add(Implies(Or([And(card[0] == c[0], card[1] == c[1])
-                              for c in cards[i]]),
-                          trick_winners[i] == tasked_player))
-
+                              for c in cards[j]]),
+                          trick_winners[j] == tasked_player))
         if print_task:
-            print(f'Task for {PLAYER_PREFIX}{tasked_player}: ' +
+            print(f'Task for {PLAYER_PREFIX}{tasked_player}: (' +
                   f'{COLOUR_NAMES[card[0]]:{COLOUR_NAME_WIDTH}} ' +
-                  f'{card[1]:>{CARD_VALUE_WIDTH}}')
+                  f'{card[1]:>{CARD_VALUE_WIDTH}})')
 
     def add_special_task_no_tricks_value(
-            forbidden_value: int, print_task: bool = True):
+            forbidden_value: int, print_task: bool = True) -> None:
         assert 0 < forbidden_value <= CARD_MAX_VALUE
+
         # No trick may be won with a card of the given value.
         for j in range(NUMBER_OF_TRICKS):
             for i in range(NUMBER_OF_PLAYERS):
                 s.add(Implies(cards[j][i][1] == forbidden_value,
                               cards[j][i][0] != active_colours[j]))
-
         if print_task:
             print('Special task: No tricks may be won ' +
                   f'with cards of value {forbidden_value}.')
 
-    for i in range(1, NUMBER_OF_PLAYERS + 1):
+    def add_task_constraint_absolute_order(
+            number_of_tasks: int = 1, start_trick: int = 1,
+            consecutive: bool = True, print_task: bool = True) -> None:
+        pass  # (TODO)
+
+    def add_task_constraint_relative_order(
+            number_of_tasks: int, print_task: bool = True) -> None:
+        assert 1 < number_of_tasks <= len(tasks)
+        ordered_tasks = random.sample(tasks, number_of_tasks)
+
+        # If a trick contains one of the order-constrained task cards, the
+        # subsequent order-constrained task card must be played in a later
+        # trick.
+        for i, task in enumerate(ordered_tasks[:-1]):
+            next_task = ordered_tasks[i + 1]
+            for j in range(NUMBER_OF_TRICKS):
+                s.add(Implies(Or([And(task[0] == c[0], task[1] == c[1])
+                                  for c in cards[j]]),
+                              Or([And(next_task[0] == c[0],
+                                      next_task[1] == c[1])
+                                  for k in range(j + 1,
+                                                 NUMBER_OF_TRICKS + i -
+                                                 number_of_tasks)
+                                  for c in cards[k]])))
+            if print_task:
+                print('Task order constraint (relative): (' +
+                      f'{COLOUR_NAMES[task[0]]:{COLOUR_NAME_WIDTH}} ' +
+                      f'{task[1]:>{CARD_VALUE_WIDTH}}) ' +
+                      'must be completed before (' +
+                      f'{COLOUR_NAMES[next_task[0]]:{COLOUR_NAME_WIDTH}} ' +
+                      f'{next_task[1]:>{CARD_VALUE_WIDTH}}).')
+
+    # Add tasks.
+    for i in sorted(random.sample(range(1, NUMBER_OF_PLAYERS + 1), 3)):
         add_card_task(i)
-    add_special_task_no_tricks_value(CARD_MAX_VALUE)
+    # add_special_task_no_tricks_value(CARD_MAX_VALUE)
+    # add_task_constraint_absolute_order()
+    add_task_constraint_relative_order(3)
 
     def timing_info(start_time):
         duration = time.time() - start_time
-        print(f'\nSolving took {int(duration // 60)}m {duration % 60:.1f}s.',)
+        print(f'\nSolving took {int(duration // 60)}m {duration % 60:.1f}s.')
 
     start_check = time.time()
 
