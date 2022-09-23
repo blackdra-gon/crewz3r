@@ -2,7 +2,7 @@ import random
 
 from z3 import *
 
-CARD_MAX_VALUE = 8
+CARD_MAX_VALUE = 9
 NUMBER_OF_COLOURS = 4
 NUMBER_OF_PLAYERS = 4
 NUMBER_OF_CARDS = NUMBER_OF_COLOURS * CARD_MAX_VALUE
@@ -124,7 +124,7 @@ def main():
                 s.add(Implies(trick_winners[j] == player,
                               starting_players[j + 1] == player))
 
-            # The colour played by the starting player is the active colour
+            # The colour played by the starting player is the active colour.
             s.add(Implies(starting_players[j] == player,
                           active_colours[j] == card[0]))
 
@@ -138,11 +138,39 @@ def main():
                                    if i != k])),
                           trick_winners[j] == player))
 
-            # If the player holds a card of the active colour, the player may
+            # If a player holds a card of the active colour, that player may
             # only play a card of that colour.
             s.add(Implies(Or([cards[m][i][0] == active_colours[j]
                               for m in range(j + 1, NUMBER_OF_TRICKS)]),
                           card[0] == active_colours[j]))
+
+    task_cards = []
+
+    def add_card_task(tasked_player: int, card: tuple[int, int] = None,
+                      print_task: bool = True) -> None:
+        if card:
+            assert 0 <= card[0] < NUMBER_OF_COLOURS
+            assert 0 < card[1] <= CARD_MAX_VALUE
+            assert card not in task_cards
+        else:
+            card = random.choice([c for hand in player_hands for c in hand
+                                  if c not in task_cards])
+        task_cards.append(card)
+
+        # If a trick contains the task card, that trick must be won by the
+        # tasked player.
+        for i in range(NUMBER_OF_TRICKS):
+            s.add(Implies(Or([And(card[0] == c[0], card[1] == c[1])
+                              for c in cards[i]]),
+                          trick_winners[i] == tasked_player))
+
+        if print_task:
+            print(f'Task for {PLAYER_PREFIX}{tasked_player}: ' +
+                  f'{COLOUR_NAMES[card[0]]:{COLOUR_NAME_WIDTH}} ' +
+                  f'{card[1]:>{CARD_VALUE_WIDTH}}')
+
+    for i in range(1, NUMBER_OF_PLAYERS + 1):
+        add_card_task(i)
 
     if s.check() == sat:
 
@@ -156,7 +184,7 @@ def main():
             for i in range(NUMBER_OF_PLAYERS):
                 colour = COLOUR_NAMES[m.evaluate(cards[j][i][0]).as_long()]
                 value = m.evaluate(cards[j][i][1]).as_long()
-                r = f'{colour :{COLOUR_NAME_WIDTH}} {value:>{CARD_VALUE_WIDTH}}'
+                r = f'{colour:{COLOUR_NAME_WIDTH}} {value:>{CARD_VALUE_WIDTH}}'
                 table_line.append(r)
             w = f'{PLAYER_PREFIX}{m.evaluate(trick_winners[j]).as_long()}'
             table_line.append(w)
