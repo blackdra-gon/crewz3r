@@ -7,13 +7,21 @@ CARD_MAX_VALUE = 9
 NUMBER_OF_COLOURS = 4
 NUMBER_OF_PLAYERS = 4
 NUMBER_OF_CARDS = NUMBER_OF_COLOURS * CARD_MAX_VALUE
+USE_TRUMP_CARDS = True
+HIGHEST_TRUMP_STARTS_FIRST_TRICK = True
+TRUMP_COLOUR = -1
+if USE_TRUMP_CARDS:
+    NUMBER_OF_CARDS += NUMBER_OF_PLAYERS
 assert NUMBER_OF_CARDS % NUMBER_OF_PLAYERS == 0
 NUMBER_OF_TRICKS = NUMBER_OF_CARDS // NUMBER_OF_PLAYERS
 
 
 def deal_cards(print_distribution: bool = True) -> list[list[tuple[int, int]]]:
     remaining_cards = [(color, value) for color in range(NUMBER_OF_COLOURS)
-                       for value in range(1, CARD_MAX_VALUE + 1)]
+                       for value in range(1, CARD_MAX_VALUE + 1)] + \
+                      [(TRUMP_COLOUR, value)
+                       for value in range(1, NUMBER_OF_PLAYERS + 1)
+                       if USE_TRUMP_CARDS]
     hands = []
     for i in range(NUMBER_OF_PLAYERS):
         hand = random.sample(remaining_cards, NUMBER_OF_TRICKS)
@@ -39,8 +47,8 @@ COLUMN_HEADERS = ['Trick', '*', 'A'] + \
                   for i in range(NUMBER_OF_PLAYERS)] + \
                  ['Winner']
 
-COLOUR_NAMES = ('R', 'G', 'B', 'Y')
-assert NUMBER_OF_COLOURS <= len(COLOUR_NAMES)
+COLOUR_NAMES = ('R', 'G', 'B', 'Y', 'X')  # Last name reserved for trump cards.
+assert NUMBER_OF_COLOURS < len(COLOUR_NAMES)
 COLOUR_NAME_WIDTH = max(map(len, COLOUR_NAMES[:NUMBER_OF_COLOURS]))
 CARD_VALUE_WIDTH = len(str(CARD_MAX_VALUE))
 
@@ -90,60 +98,88 @@ def main():
     s.add(Distinct(*[card[0] * CARD_MAX_VALUE + card[1]
                      for trick in cards for card in trick]))
 
+    if USE_TRUMP_CARDS and HIGHEST_TRUMP_STARTS_FIRST_TRICK:
+        # The player with the highest trump card starts the first trick.
+        for i in range(NUMBER_OF_PLAYERS):
+            s.add(Implies((TRUMP_COLOUR, NUMBER_OF_PLAYERS) in player_hands[i],
+                          starting_players[0] == i + 1))
+
     for j in range(NUMBER_OF_TRICKS):
 
+        starting_player = starting_players[j]
+        active_colour = active_colours[j]
+        trick_winner = trick_winners[j]
+
         # Only valid player indices may be used.
-        s.add(0 < trick_winners[j])
-        s.add(trick_winners[j] <= NUMBER_OF_PLAYERS)
-        s.add(0 < starting_players[j])
-        s.add(starting_players[j] <= NUMBER_OF_PLAYERS)
+        s.add(0 < trick_winner)
+        s.add(trick_winner <= NUMBER_OF_PLAYERS)
+        s.add(0 < starting_player)
+        s.add(starting_player <= NUMBER_OF_PLAYERS)
 
         # Only valid colour indices may be used.
-        s.add(0 <= active_colours[j])
-        s.add(active_colours[j] < NUMBER_OF_COLOURS)
+        s.add(0 <= active_colour)
+        s.add(active_colour < NUMBER_OF_COLOURS)
 
         for i in range(NUMBER_OF_PLAYERS):
 
-            card = cards[j][i]
+            colour, value = cards[j][i][0], cards[j][i][1]
             player = i + 1
 
             # Only valid colour indices may be used.
-            s.add(0 <= card[0])
-            s.add(card[0] < NUMBER_OF_COLOURS)
+            s.add(-1 <= colour)
+            s.add(colour < NUMBER_OF_COLOURS)
 
             # Only valid card values may be used.
-            s.add(0 < card[1])
-            s.add(card[1] <= CARD_MAX_VALUE)
+            s.add(0 < value)
+            s.add(value <= CARD_MAX_VALUE)
+
+            # Trump cards are limited in number to one per player.
+            s.add(Implies(colour == TRUMP_COLOUR,
+                          value <= NUMBER_OF_PLAYERS))
 
             # Players may only play cards that they hold.
-            s.add(Or([And(card[0] == c[0], card[1] == c[1])
+            s.add(Or([And(colour == c[0], value == c[1])
                       for c in player_hands[i]]))
 
             # If a player wins a trick, that player is the starting player in
             # the next trick.
             if j + 1 != NUMBER_OF_TRICKS:
-                s.add(Implies(trick_winners[j] == player,
+                s.add(Implies(trick_winner == player,
                               starting_players[j + 1] == player))
 
             # The colour played by the starting player is the active colour.
-            s.add(Implies(starting_players[j] == player,
-                          active_colours[j] == card[0]))
+            s.add(Implies(starting_player == player,
+                          active_colour == colour))
 
-            # If a player's card is of the active colour and higher than all
+            # Case 1: The player has played a trump card.
+            # If the player's card is the highest trump card in the trick,
+            # that player has won the trick.
+            if USE_TRUMP_CARDS:
+                s.add(Implies(And(colour == TRUMP_COLOUR,
+                                  And([Or(cards[j][k][0] != TRUMP_COLOUR,
+                                          value > cards[j][k][1])
+                                       for k in range(NUMBER_OF_PLAYERS)
+                                       if i != k])),
+                              trick_winner == player))
+
+            # Case 2: The player has not played a trump card and no trump
+            # card is present in the trick.
+            # If the player's card is of the active colour and higher than all
             # other cards of the active colour in the trick, that player has
             # won the trick.
-            s.add(Implies(And(card[0] == active_colours[j],
-                              And([Or(cards[j][k][0] != active_colours[j],
-                                      card[1] > cards[j][k][1])
+            s.add(Implies(And(colour == active_colours[j],
+                              And([And(cards[j][k][0] != TRUMP_COLOUR,
+                                       Or(cards[j][k][0] != active_colour,
+                                          value > cards[j][k][1]))
                                    for k in range(NUMBER_OF_PLAYERS)
                                    if i != k])),
-                          trick_winners[j] == player))
+                          trick_winner == player))
 
             # If a player holds a card of the active colour, that player may
             # only play a card of that colour.
-            s.add(Implies(Or([cards[m][i][0] == active_colours[j]
+            s.add(Implies(Or([cards[m][i][0] == active_colour
                               for m in range(j + 1, NUMBER_OF_TRICKS)]),
-                          card[0] == active_colours[j]))
+                          colour == active_colour))
 
     task_cards = []
 
