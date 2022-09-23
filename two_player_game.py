@@ -2,10 +2,10 @@ import random
 
 from z3 import *
 
-CARD_MAX_VALUE = 16
-NUMBER_OF_COLOURS = 1  # Values other than 1 are not supported yet.
-NUMBER_OF_CARDS = NUMBER_OF_COLOURS * CARD_MAX_VALUE
+CARD_MAX_VALUE = 8
+NUMBER_OF_COLOURS = 4
 NUMBER_OF_PLAYERS = 4
+NUMBER_OF_CARDS = NUMBER_OF_COLOURS * CARD_MAX_VALUE
 assert NUMBER_OF_CARDS % NUMBER_OF_PLAYERS == 0
 NUMBER_OF_TRICKS = NUMBER_OF_CARDS // NUMBER_OF_PLAYERS
 
@@ -25,6 +25,8 @@ def deal_cards() -> list:
 
 COLUMN_SEPARATOR = ' | '
 TRICK_HEADER = 'Trick'
+STARTING_HEADER = '*'
+ACTIVE_HEADER = 'A'
 PLAYER_PREFIX = 'P'
 WINNER_HEADER = 'Winner'
 COLOUR_NAMES = ('R', 'G', 'B', 'Y', '')  # Empty string is used for headers.
@@ -34,75 +36,145 @@ CARD_VALUE_WIDTH = len(str(CARD_MAX_VALUE))
 COLUMN_WIDTH = max(COLOUR_NAME_WIDTH + 1 + CARD_VALUE_WIDTH,
                    len(PLAYER_PREFIX + str(NUMBER_OF_PLAYERS)))
 TRICK_COLUMN_WIDTH = max(len(str(NUMBER_OF_TRICKS)), len(TRICK_HEADER))
+STARTING_COLUMN_WIDTH = max(len(str(NUMBER_OF_PLAYERS) + PLAYER_PREFIX),
+                            len(STARTING_HEADER))
+ACTIVE_COLUMN_WIDTH = max(len(ACTIVE_HEADER), COLOUR_NAME_WIDTH)
 WINNER_COLUMN_WIDTH = max(len(str(NUMBER_OF_PLAYERS) + PLAYER_PREFIX),
                           len(WINNER_HEADER))
-TOTAL_WIDTH = TRICK_COLUMN_WIDTH + WINNER_COLUMN_WIDTH + len(COLUMN_SEPARATOR) \
-              + NUMBER_OF_PLAYERS * (COLUMN_WIDTH + len(COLUMN_SEPARATOR))
+TOTAL_WIDTH = TRICK_COLUMN_WIDTH + STARTING_COLUMN_WIDTH + ACTIVE_COLUMN_WIDTH \
+              + NUMBER_OF_PLAYERS * (COLUMN_WIDTH + len(COLUMN_SEPARATOR)) \
+              + WINNER_COLUMN_WIDTH + (3 * len(COLUMN_SEPARATOR))
 
 
-def print_table_row(index: int, cards_played: list, trick_winner: int) -> None:
-    def print_row(i, cs, w):
-        ir = [f'{i!s:^{TRICK_COLUMN_WIDTH}}']
-        cr = [f'{COLOUR_NAMES[c[0]]:{COLOUR_NAME_WIDTH}} ' +
-              f'{c[1]!s:>{CARD_VALUE_WIDTH}}' for c in cs]
-        wr = [f'{w!s:^{WINNER_COLUMN_WIDTH}}']
-        print(COLUMN_SEPARATOR.join(ir + cr + wr))
+def print_table_row(index: int, starting_player: int, active_colour: int,
+                    cards_played: list, trick_winner: int) -> None:
+    def card_repr(cards):
+        cr = []
+        for card in cards:
+            r = f'{COLOUR_NAMES[card[0]]:{COLOUR_NAME_WIDTH}} ' + \
+                f'{card[1]:>{CARD_VALUE_WIDTH}}'
+            cr.append(f'{r:^{COLUMN_WIDTH}}')
+        return cr
+
+    def print_row(i, s, a, cr, w):
+        ir = [f'{i:^{TRICK_COLUMN_WIDTH}}']
+        sr = [f'{s:^{STARTING_COLUMN_WIDTH}}']
+        ar = [f'{a:^{ACTIVE_COLUMN_WIDTH}}']
+        wr = [f'{w:^{WINNER_COLUMN_WIDTH}}']
+        print(COLUMN_SEPARATOR.join(ir + sr + ar + cr + wr))
 
     # Print table header before first row.
     if index == 1:
-        print_row(TRICK_HEADER,
-                  [(-1, f'{PLAYER_PREFIX}{i + 1}')
-                   for i in range(NUMBER_OF_PLAYERS)],
-                  WINNER_HEADER)
+        player_headers = [f'{f"{PLAYER_PREFIX}{i + 1}":{COLUMN_WIDTH}}'
+                          for i in range(NUMBER_OF_PLAYERS)]
+        print()
+        print_row(TRICK_HEADER, STARTING_HEADER, ACTIVE_HEADER,
+                  player_headers, WINNER_HEADER)
         print('-' * TOTAL_WIDTH)
+
     # Print regular rows.
-    print_row(index, cards_played, f'{PLAYER_PREFIX}{trick_winner}')
+    print_row(index, f'{PLAYER_PREFIX}{starting_player}',
+              COLOUR_NAMES[active_colour], card_repr(cards_played),
+              f'{PLAYER_PREFIX}{trick_winner}')
+
+
+def print_card_distribution(hands):
+    print('\nCard distribution:')
+    for i, cs in enumerate(hands):
+        print(f'{PLAYER_PREFIX}{i + 1}: ', end='')
+        print(', '.join([f'({COLOUR_NAMES[c[0]]:{COLOUR_NAME_WIDTH}} ' +
+                         f'{c[1]:>{CARD_VALUE_WIDTH}})' for c in cs]))
 
 
 def main():
     player_hands = deal_cards()
-    print(f'Card distribution: {player_hands}')
+    print_card_distribution(player_hands)
 
-    cards = [[Int('c_%s_%s' % (i, j)) for i in range(NUMBER_OF_PLAYERS)] for
-             j in range(NUMBER_OF_TRICKS)]
-    trick_won = [Int('t_%s' % i) for i in range(NUMBER_OF_TRICKS)]
+    # A card is represented by two integers.
+    # The first represents the colour, the second the card value.
+    cards = [[IntVector('c_%s_%s' % (i, j), 2)
+              for i in range(NUMBER_OF_PLAYERS)]
+             for j in range(NUMBER_OF_TRICKS)]
+
+    # Lists of integers store the starting player, active colour and winner
+    # for each trick.
+    starting_players = [Int('s_%s' % i) for i in range(NUMBER_OF_TRICKS)]
+    active_colours = [Int('a_%s' % i) for i in range(NUMBER_OF_TRICKS)]
+    trick_winners = [Int('w_%s' % i) for i in range(NUMBER_OF_TRICKS)]
 
     s = Solver()
 
     # Each card may occur only once.
-    s.add(Distinct(*[card for trick in cards for card in trick]))
+    s.add(Distinct(*[card[0] * CARD_MAX_VALUE + card[1]
+                     for trick in cards for card in trick]))
 
     for j in range(NUMBER_OF_TRICKS):
 
-        for i in range(NUMBER_OF_PLAYERS):
-            card = cards[j][i]
+        # Only valid player indices may be used.
+        s.add(0 < trick_winners[j])
+        s.add(trick_winners[j] <= NUMBER_OF_PLAYERS)
+        s.add(0 < starting_players[j])
+        s.add(starting_players[j] <= NUMBER_OF_PLAYERS)
 
-            # All card values must be in the valid range.
-            s.add(0 < card)
-            s.add(card <= CARD_MAX_VALUE)
+        # Only valid colour indices may be used.
+        s.add(0 <= active_colours[j])
+        s.add(active_colours[j] < NUMBER_OF_COLOURS)
+
+        for i in range(NUMBER_OF_PLAYERS):
+
+            card = cards[j][i]
+            player = i + 1
+
+            # Only valid colour indices may be used.
+            s.add(0 <= card[0])
+            s.add(card[0] < NUMBER_OF_COLOURS)
+
+            # Only valid card values may be used.
+            s.add(0 < card[1])
+            s.add(card[1] <= CARD_MAX_VALUE)
 
             # Players may only play cards that they hold.
-            s.add(Or([card == c[1] for c in player_hands[i]]))
+            s.add(Or([And(card[0] == c[0], card[1] == c[1])
+                      for c in player_hands[i]]))
 
-            # The player has won the trick if their card has the same colour
-            # as the card played by the winner of the previous trick and the
-            # card is higher than all other cards of that colour in the trick.
-            s.add(Implies(And(True,  # TODO: same as played colour
-                              And([card > cards[j][k]
+            # If a player wins a trick, that player is the starting player in
+            # the next trick.
+            if j + 1 != NUMBER_OF_TRICKS:
+                s.add(Implies(trick_winners[j] == player,
+                              starting_players[j + 1] == player))
+
+            # The colour played by the starting player is the active colour
+            s.add(Implies(starting_players[j] == player,
+                          active_colours[j] == card[0]))
+
+            # If a player's card is of the active colour and higher than all
+            # other cards of the active colour in the trick, that player has
+            # won the trick.
+            s.add(Implies(And(card[0] == active_colours[j],
+                              And([Or(cards[j][k][0] != active_colours[j],
+                                      card[1] > cards[j][k][1])
                                    for k in range(NUMBER_OF_PLAYERS)
-                                   if (i != k and True)])),  # TODO: same colour
-                          trick_won[j] == i + 1))
+                                   if i != k])),
+                          trick_winners[j] == player))
+
+            # If the player holds a card of the active colour, the player may
+            # only play a card of that colour.
+            s.add(Implies(Or([cards[m][i][0] == active_colours[j]
+                              for m in range(j + 1, NUMBER_OF_TRICKS)]),
+                          card[0] == active_colours[j]))
 
     if s.check() == sat:
 
         m = s.model()
 
         for j in range(NUMBER_OF_TRICKS):
-            # Temporarily hardcoded colour/value tuple. (TODO)
-            played = [(0, m.evaluate(cards[j][i]))
+            starting = m.evaluate(starting_players[j]).as_long()
+            active = m.evaluate(active_colours[j]).as_long()
+            played = [(m.evaluate(cards[j][i][0]).as_long(),
+                       m.evaluate(cards[j][i][1]).as_long())
                       for i in range(NUMBER_OF_PLAYERS)]
-            winner = m.evaluate(trick_won[j]).as_long()
-            print_table_row(j + 1, played, winner)
+            winner = m.evaluate(trick_winners[j]).as_long()
+            print_table_row(j + 1, starting, active, played, winner)
     else:
         print('unsat')
 
