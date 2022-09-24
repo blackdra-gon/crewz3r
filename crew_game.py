@@ -3,13 +3,27 @@ import time
 
 from z3 import *
 
+# Cards of each colour will be created ranging from 1 to this value, inclusive.
 CARD_MAX_VALUE = 9
+
+# The number of different colours. Trump cards are not counted.
 NUMBER_OF_COLOURS = 4
+
+# The number of players for which to solve the game.
 NUMBER_OF_PLAYERS = 4
-NUMBER_OF_CARDS = NUMBER_OF_COLOURS * CARD_MAX_VALUE
+
+# Trump cards can entirely be toggled on and off.
 USE_TRUMP_CARDS = True
+
+# The player with the highest trump card starts the first trick.
+# Disable to allow for more solving options with different start players.
 HIGHEST_TRUMP_STARTS_FIRST_TRICK = True
+
+# Constant representing the trump cards' colour.
+# Changing this requires to adapt the implementation accordingly.
 TRUMP_COLOUR = -1
+
+NUMBER_OF_CARDS = NUMBER_OF_COLOURS * CARD_MAX_VALUE
 if USE_TRUMP_CARDS:
     NUMBER_OF_CARDS += NUMBER_OF_PLAYERS
 assert NUMBER_OF_CARDS % NUMBER_OF_PLAYERS == 0
@@ -33,30 +47,45 @@ def deal_cards(print_distribution: bool = True) -> list[list[tuple[int, int]]]:
         print('\nCard distribution:')
         for i, cs in enumerate(hands):
             print(f'{PLAYER_PREFIX}{i + 1}: ', end='')
-            print(', '.join([f'({COLOUR_NAMES[c[0]]:{COLOUR_NAME_WIDTH}} ' +
+            print(', '.join([f'({COLOUR_NAMES[c[0]]:{COLOUR_NAME_WIDTH}} '
                              f'{c[1]:>{CARD_VALUE_WIDTH}})' for c in cs]))
     return hands
 
 
+# Table formatting parameters.
 COLUMN_SEPARATOR = ' | '
-PLAYER_PREFIX = 'Player '
+PLAYER_PREFIX = 'P'
+START_MARKER = '>'
+TASK_MARKER = '*'
 
-COLUMN_HEADERS = ['Trick', '*', 'A'] + \
+# In-column start and task markers can be toggled.
+MARK_START = True
+MARK_TASK = True
+
+# Table column headers.
+COLUMN_HEADERS = ['Trick', 'Starting', 'A'] + \
                  [f'{PLAYER_PREFIX}{i + 1}'
                   for i in range(NUMBER_OF_PLAYERS)] + \
-                 ['Winner']
+                 ['Winner', 'T']
 
+# Text representation of colours.
 COLOUR_NAMES = ('R', 'G', 'B', 'Y', 'X')  # Last name reserved for trump cards.
+
 assert NUMBER_OF_COLOURS < len(COLOUR_NAMES)
 COLOUR_NAME_WIDTH = max(map(len, COLOUR_NAMES[:NUMBER_OF_COLOURS]))
 CARD_VALUE_WIDTH = len(str(CARD_MAX_VALUE))
+START_MARKER_WIDTH = len(START_MARKER) if MARK_START else 0
+TASK_MARKER_WIDTH = len(TASK_MARKER) if MARK_TASK else 0
 
-CONTENT_WIDTHS = [len(str(NUMBER_OF_TRICKS)),
-                  len(PLAYER_PREFIX + str(NUMBER_OF_PLAYERS)),
-                  COLOUR_NAME_WIDTH] + \
-                 [COLOUR_NAME_WIDTH + 1 + CARD_VALUE_WIDTH] * \
-                 NUMBER_OF_PLAYERS + \
-                 [len(PLAYER_PREFIX + str(NUMBER_OF_PLAYERS))]
+CONTENT_WIDTHS = [len(str(NUMBER_OF_TRICKS))] + \
+                 [len(PLAYER_PREFIX + str(NUMBER_OF_PLAYERS))] + \
+                 [COLOUR_NAME_WIDTH] + \
+                 [(START_MARKER_WIDTH + 1 if MARK_START else 0) +
+                  COLOUR_NAME_WIDTH + 1 + CARD_VALUE_WIDTH +
+                  (1 + TASK_MARKER_WIDTH if MARK_TASK else 0)] \
+                 * NUMBER_OF_PLAYERS + \
+                 [len(PLAYER_PREFIX + str(NUMBER_OF_PLAYERS))] + \
+                 [len(TASK_MARKER)]
 
 
 def print_table(headers: list[str], lines: list[list[str]],
@@ -97,8 +126,8 @@ def main():
     s.add(Distinct(*[card[0] * CARD_MAX_VALUE + card[1]
                      for trick in cards for card in trick]))
 
+    # The player with the highest trump card starts the first trick.
     if USE_TRUMP_CARDS and HIGHEST_TRUMP_STARTS_FIRST_TRICK:
-        # The player with the highest trump card starts the first trick.
         for i in range(NUMBER_OF_PLAYERS):
             s.add(Implies((TRUMP_COLOUR, NUMBER_OF_PLAYERS) in player_hands[i],
                           starting_players[0] == i + 1))
@@ -181,6 +210,7 @@ def main():
                           colour == active_colour))
 
     tasks = []
+    task_cards = []
 
     def add_card_task(tasked_player: int, card: tuple[int, int] = None,
                       print_task: bool = True) -> None:
@@ -190,18 +220,31 @@ def main():
             assert card not in tasks
         else:
             card = random.choice([c for hand in player_hands for c in hand
-                                  if c not in tasks and c[0] != TRUMP_COLOUR])
-        tasks.append(card)
+                                  if c not in task_cards
+                                  and c[0] != TRUMP_COLOUR])
+        task_cards.append(card)
+        task = IntVector('task_%s' % str(len(tasks) + 1), 4)
+        tasks.append(task)
+
+        # A task is represented by four integers: The first two represent the
+        # card, the third the tasked player and the fourth stores the trick
+        # in which the task was completed.
+        s.add(task[0] == card[0])
+        s.add(task[1] == card[1])
+        s.add(task[2] == tasked_player)
+        s.add(0 < task[3])
+        s.add(task[3] <= NUMBER_OF_TRICKS)
 
         # If a trick contains the task card, that trick must be won by the
-        # tasked player.
+        # tasked player. The task is then completed.
         for j in range(NUMBER_OF_TRICKS):
             s.add(Implies(Or([And(card[0] == c[0], card[1] == c[1])
                               for c in cards[j]]),
-                          trick_winners[j] == tasked_player))
+                          And(trick_winners[j] == tasked_player,
+                              task[3] == j)))
         if print_task:
-            print(f'Task for {PLAYER_PREFIX}{tasked_player}: (' +
-                  f'{COLOUR_NAMES[card[0]]:{COLOUR_NAME_WIDTH}} ' +
+            print(f'Task for {PLAYER_PREFIX}{tasked_player}: ('
+                  f'{COLOUR_NAMES[card[0]]:{COLOUR_NAME_WIDTH}} '
                   f'{card[1]:>{CARD_VALUE_WIDTH}})')
 
     def add_special_task_no_tricks_value(
@@ -214,7 +257,7 @@ def main():
                 s.add(Implies(cards[j][i][1] == forbidden_value,
                               cards[j][i][0] != active_colours[j]))
         if print_task:
-            print('Special task: No tricks may be won ' +
+            print('Special task: No tricks may be won '
                   f'with cards of value {forbidden_value}.')
 
     def add_task_constraint_absolute_order(
@@ -225,15 +268,15 @@ def main():
     def add_task_constraint_relative_order(
             number_of_tasks: int, print_task: bool = True) -> None:
         assert 1 < number_of_tasks <= len(tasks)
-        ordered_tasks = random.sample(tasks, number_of_tasks)
+        ordered_tasks = random.sample(task_cards, number_of_tasks)
 
         # If a trick contains one of the order-constrained task cards, the
         # subsequent order-constrained task card must be played in a later
         # trick.
-        for i, task in enumerate(ordered_tasks[:-1]):
+        for i, o_task in enumerate(ordered_tasks[:-1]):
             next_task = ordered_tasks[i + 1]
             for j in range(NUMBER_OF_TRICKS):
-                s.add(Implies(Or([And(task[0] == c[0], task[1] == c[1])
+                s.add(Implies(Or([And(o_task[0] == c[0], o_task[1] == c[1])
                                   for c in cards[j]]),
                               Or([And(next_task[0] == c[0],
                                       next_task[1] == c[1])
@@ -242,19 +285,20 @@ def main():
                                                  number_of_tasks)
                                   for c in cards[k]])))
             if print_task:
-                print('Task order constraint (relative): (' +
-                      f'{COLOUR_NAMES[task[0]]:{COLOUR_NAME_WIDTH}} ' +
-                      f'{task[1]:>{CARD_VALUE_WIDTH}}) ' +
-                      'must be completed before (' +
-                      f'{COLOUR_NAMES[next_task[0]]:{COLOUR_NAME_WIDTH}} ' +
+                print('Task order constraint (relative): ('
+                      f'{COLOUR_NAMES[o_task[0]]:{COLOUR_NAME_WIDTH}} '
+                      f'{o_task[1]:>{CARD_VALUE_WIDTH}}) '
+                      'must be completed before ('
+                      f'{COLOUR_NAMES[next_task[0]]:{COLOUR_NAME_WIDTH}} '
                       f'{next_task[1]:>{CARD_VALUE_WIDTH}}).')
 
     # Add tasks.
     for i in sorted(random.sample(range(1, NUMBER_OF_PLAYERS + 1), 3)):
         add_card_task(i)
     # add_special_task_no_tricks_value(CARD_MAX_VALUE)
-    # add_task_constraint_absolute_order()
-    add_task_constraint_relative_order(3)
+    # add_task_constraint_absolute_order(
+    #     start_trick=random.choice(range(1, NUMBER_OF_TRICKS + 1)))
+    # add_task_constraint_relative_order(2)
 
     def timing_info(start_time):
         duration = time.time() - start_time
@@ -270,16 +314,23 @@ def main():
 
         table_lines = []
         for j in range(NUMBER_OF_TRICKS):
-            s = f'{PLAYER_PREFIX}{m.evaluate(starting_players[j]).as_long()}'
-            c = COLOUR_NAMES[m.evaluate(active_colours[j]).as_long()]
-            table_line = [f'{j + 1}', s, c]
+            s = m.evaluate(starting_players[j]).as_long()
+            c = m.evaluate(active_colours[j]).as_long()
+            table_line = [f'{j + 1}', f'{PLAYER_PREFIX}{s}', COLOUR_NAMES[c]]
             for i in range(NUMBER_OF_PLAYERS):
-                colour = COLOUR_NAMES[m.evaluate(cards[j][i][0]).as_long()]
+                colour = m.evaluate(cards[j][i][0]).as_long()
                 value = m.evaluate(cards[j][i][1]).as_long()
-                r = f'{colour:{COLOUR_NAME_WIDTH}} {value:>{CARD_VALUE_WIDTH}}'
+                start = START_MARKER if MARK_START and i + 1 == s else ''
+                task = TASK_MARKER if (colour, value) in task_cards else ''
+                r = (f'{start:{START_MARKER_WIDTH}} '
+                     f'{COLOUR_NAMES[colour]:{COLOUR_NAME_WIDTH}} '
+                     f'{value:>{CARD_VALUE_WIDTH}} '
+                     f'{task:{TASK_MARKER_WIDTH}}')
                 table_line.append(r)
             w = f'{PLAYER_PREFIX}{m.evaluate(trick_winners[j]).as_long()}'
             table_line.append(w)
+            t = '*' if j in [m.evaluate(x[3]).as_long() for x in tasks] else ''
+            table_line.append(t)
             table_lines.append(table_line)
         print_table(COLUMN_HEADERS, table_lines, CONTENT_WIDTHS, ' | ')
 
