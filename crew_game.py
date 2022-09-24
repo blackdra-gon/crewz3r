@@ -29,29 +29,6 @@ if USE_TRUMP_CARDS:
 assert NUMBER_OF_CARDS % NUMBER_OF_PLAYERS == 0
 NUMBER_OF_TRICKS = NUMBER_OF_CARDS // NUMBER_OF_PLAYERS
 
-
-def deal_cards(print_distribution: bool = True) -> list[list[tuple[int, int]]]:
-    remaining_cards = [(color, value) for color in range(NUMBER_OF_COLOURS)
-                       for value in range(1, CARD_MAX_VALUE + 1)] + \
-                      [(TRUMP_COLOUR, value)
-                       for value in range(1, NUMBER_OF_PLAYERS + 1)
-                       if USE_TRUMP_CARDS]
-    hands = []
-    for i in range(NUMBER_OF_PLAYERS):
-        hand = sorted(random.sample(remaining_cards, NUMBER_OF_TRICKS))
-        for card in hand:
-            remaining_cards.remove(card)
-        hands.append(hand)
-
-    if print_distribution:
-        print('\nCard distribution:')
-        for i, cs in enumerate(hands):
-            print(f'{PLAYER_PREFIX}{i + 1}: ', end='')
-            print(', '.join([f'({COLOUR_NAMES[c[0]]:{COLOUR_NAME_WIDTH}} '
-                             f'{c[1]:>{CARD_VALUE_WIDTH}})' for c in cs]))
-    return hands
-
-
 # Table formatting parameters.
 COLUMN_SEPARATOR = ' | '
 PLAYER_PREFIX = 'P'
@@ -86,6 +63,28 @@ CONTENT_WIDTHS = [len(str(NUMBER_OF_TRICKS))] + \
                  * NUMBER_OF_PLAYERS + \
                  [len(PLAYER_PREFIX + str(NUMBER_OF_PLAYERS))] + \
                  [len(TASK_MARKER)]
+
+
+def deal_cards(print_distribution: bool = True) -> list[list[tuple[int, int]]]:
+    remaining_cards = [(color, value) for color in range(NUMBER_OF_COLOURS)
+                       for value in range(1, CARD_MAX_VALUE + 1)] + \
+                      [(TRUMP_COLOUR, value)
+                       for value in range(1, NUMBER_OF_PLAYERS + 1)
+                       if USE_TRUMP_CARDS]
+    hands = []
+    for i in range(NUMBER_OF_PLAYERS):
+        hand = sorted(random.sample(remaining_cards, NUMBER_OF_TRICKS))
+        for card in hand:
+            remaining_cards.remove(card)
+        hands.append(hand)
+
+    if print_distribution:
+        print('\nCard distribution:')
+        for i, cs in enumerate(hands):
+            print(f'{PLAYER_PREFIX}{i + 1}: ', end='')
+            print(', '.join([f'({COLOUR_NAMES[c[0]]:{COLOUR_NAME_WIDTH}} '
+                             f'{c[1]:>{CARD_VALUE_WIDTH}})' for c in cs]))
+    return hands
 
 
 def print_table(headers: list[str], lines: list[list[str]],
@@ -195,7 +194,7 @@ def main():
             # If the player's card is of the active colour and higher than all
             # other cards of the active colour in the trick, that player has
             # won the trick.
-            s.add(Implies(And(colour == active_colours[j],
+            s.add(Implies(And(colour == active_colour,
                               And([And(cards[j][k][0] != TRUMP_COLOUR,
                                        Or(cards[j][k][0] != active_colour,
                                           value > cards[j][k][1]))
@@ -223,17 +222,17 @@ def main():
                                   if c not in task_cards
                                   and c[0] != TRUMP_COLOUR])
         task_cards.append(card)
-        task = IntVector('task_%s' % str(len(tasks) + 1), 4)
-        tasks.append(task)
 
         # A task is represented by four integers: The first two represent the
         # card, the third the tasked player and the fourth stores the trick
         # in which the task was completed.
-        s.add(task[0] == card[0])
-        s.add(task[1] == card[1])
-        s.add(task[2] == tasked_player)
-        s.add(0 < task[3])
-        s.add(task[3] <= NUMBER_OF_TRICKS)
+        new_task = IntVector('task_%s' % str(len(tasks) + 1), 4)
+        tasks.append(new_task)
+        s.add(new_task[0] == card[0])
+        s.add(new_task[1] == card[1])
+        s.add(new_task[2] == tasked_player)
+        s.add(0 < new_task[3])
+        s.add(new_task[3] <= NUMBER_OF_TRICKS)
 
         # If a trick contains the task card, that trick must be won by the
         # tasked player. The task is then completed.
@@ -241,7 +240,7 @@ def main():
             s.add(Implies(Or([And(card[0] == c[0], card[1] == c[1])
                               for c in cards[j]]),
                           And(trick_winners[j] == tasked_player,
-                              task[3] == j)))
+                              new_task[3] == j)))
         if print_task:
             print(f'Task for {PLAYER_PREFIX}{tasked_player}: ('
                   f'{COLOUR_NAMES[card[0]]:{COLOUR_NAME_WIDTH}} '
@@ -314,22 +313,24 @@ def main():
 
         table_lines = []
         for j in range(NUMBER_OF_TRICKS):
-            s = m.evaluate(starting_players[j]).as_long()
-            c = m.evaluate(active_colours[j]).as_long()
-            table_line = [f'{j + 1}', f'{PLAYER_PREFIX}{s}', COLOUR_NAMES[c]]
+            sp = m.evaluate(starting_players[j]).as_long()
+            ac = m.evaluate(active_colours[j]).as_long()
+            table_line = [f'{j + 1}', f'{PLAYER_PREFIX}{sp}', COLOUR_NAMES[ac]]
             for i in range(NUMBER_OF_PLAYERS):
                 colour = m.evaluate(cards[j][i][0]).as_long()
                 value = m.evaluate(cards[j][i][1]).as_long()
-                start = START_MARKER if MARK_START and i + 1 == s else ''
-                task = TASK_MARKER if (colour, value) in task_cards else ''
-                r = (f'{start:{START_MARKER_WIDTH}} '
-                     f'{COLOUR_NAMES[colour]:{COLOUR_NAME_WIDTH}} '
-                     f'{value:>{CARD_VALUE_WIDTH}} '
-                     f'{task:{TASK_MARKER_WIDTH}}')
-                table_line.append(r)
+                start_mark = START_MARKER if MARK_START and i + 1 == s else ''
+                task_mark = TASK_MARKER if (colour, value) in task_cards else ''
+                card_repr = (f'{start_mark:{START_MARKER_WIDTH}} '
+                             f'{COLOUR_NAMES[colour]:{COLOUR_NAME_WIDTH}} '
+                             f'{value:>{CARD_VALUE_WIDTH}} '
+                             f'{task_mark:{TASK_MARKER_WIDTH}}')
+                table_line.append(card_repr)
             w = f'{PLAYER_PREFIX}{m.evaluate(trick_winners[j]).as_long()}'
             table_line.append(w)
-            t = '*' if j in [m.evaluate(x[3]).as_long() for x in tasks] else ''
+            t = TASK_MARKER \
+                if j in [m.evaluate(x[3]).as_long() for x in tasks] \
+                else ' ' * len(TASK_MARKER)
             table_line.append(t)
             table_lines.append(table_line)
         print_table(COLUMN_HEADERS, table_lines, CONTENT_WIDTHS, ' | ')
