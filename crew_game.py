@@ -306,6 +306,19 @@ def main():
                       f'must be number {i + 1} in the order of all '
                       f'{len(tasks)} completed tasks.')
 
+    def add_task_constraint_absolute_order_last(task: Card,
+                                                print_task: bool = True):
+        assert valid_card(task)
+
+        # Absolute order is specified as a set of relative order constraints.
+        for u_task in [u_t for u_t in task_cards if u_t != task]:
+            add_task_constraint_relative_order((u_task, task), False)
+        if print_task:
+            print('Task order constraint (absolute): ('
+                  f'{COLOUR_NAMES[task[0]]:{COLOUR_NAME_WIDTH}} '
+                  f'{task[1]:>{CARD_VALUE_WIDTH}}) '
+                  'must be the last task to be completed.')
+
     def add_special_task_no_tricks_value(
             forbidden_value: int, print_task: bool = True) -> None:
         assert 0 < forbidden_value <= CARD_MAX_VALUE
@@ -320,10 +333,11 @@ def main():
                   f'with cards of value {forbidden_value}.')
 
     # Add tasks.
-    for i in sorted(random.sample(range(1, NUMBER_OF_PLAYERS + 1), 3)):
+    for i in sorted(random.sample(range(1, NUMBER_OF_PLAYERS + 1), 4)):
         add_card_task(i)
-    add_task_constraint_relative_order(random.sample(task_cards, 2))
-    add_task_constraint_absolute_order(random.sample(task_cards, 1))
+    # add_task_constraint_relative_order(random.sample(task_cards, 2))
+    # add_task_constraint_absolute_order(random.sample(task_cards, 1))
+    add_task_constraint_absolute_order_last(random.choice(task_cards))
     add_special_task_no_tricks_value(CARD_MAX_VALUE)
 
     def timing_info(start_time):
