@@ -3,6 +3,10 @@ import time
 
 from z3 import *
 
+# Type alias for cards: The first integer represents the color (or suit),
+# the second determines the card value.
+Card = tuple[int, int]
+
 # Cards of each colour will be created ranging from 1 to this value, inclusive.
 CARD_MAX_VALUE = 9
 
@@ -31,7 +35,7 @@ NUMBER_OF_TRICKS = NUMBER_OF_CARDS // NUMBER_OF_PLAYERS
 
 # Table formatting parameters.
 COLUMN_SEPARATOR = ' | '
-PLAYER_PREFIX = 'P'
+PLAYER_PREFIX = 'Player '
 START_MARKER = '>'
 TASK_MARKER = '*'
 
@@ -65,7 +69,7 @@ CONTENT_WIDTHS = [len(str(NUMBER_OF_TRICKS))] + \
                  [len(TASK_MARKER)]
 
 
-def deal_cards(print_distribution: bool = True) -> list[list[tuple[int, int]]]:
+def deal_cards(print_distribution: bool = True) -> list[list[Card]]:
     remaining_cards = [(color, value) for color in range(NUMBER_OF_COLOURS)
                        for value in range(1, CARD_MAX_VALUE + 1)] + \
                       [(TRUMP_COLOUR, value)
@@ -208,14 +212,17 @@ def main():
                               for m in range(j + 1, NUMBER_OF_TRICKS)]),
                           colour == active_colour))
 
-    tasks = []
-    task_cards = []
+    task_cards: list[Card] = []
+    tasks: list[IntVector] = []
 
-    def add_card_task(tasked_player: int, card: tuple[int, int] = None,
+    def valid_card(card: Card) -> bool:
+        return 0 <= card[0] < NUMBER_OF_COLOURS and \
+               0 < card[1] <= CARD_MAX_VALUE
+
+    def add_card_task(tasked_player: int, card: Card = None,
                       print_task: bool = True) -> None:
         if card:
-            assert 0 <= card[0] < NUMBER_OF_COLOURS
-            assert 0 < card[1] <= CARD_MAX_VALUE
+            assert valid_card(card)
             assert card not in tasks
         else:
             card = random.choice([c for hand in player_hands for c in hand
@@ -223,9 +230,10 @@ def main():
                                   and c[0] != TRUMP_COLOUR])
         task_cards.append(card)
 
-        # A task is represented by four integers: The first two represent the
-        # card, the third the tasked player and the fourth stores the trick
-        # in which the task was completed.
+        # A task is represented by four integers:
+        # - The first two represent the card color and value,
+        # - the third represents the tasked player,
+        # - the fourth stores the trick in which the task was completed
         new_task = IntVector('task_%s' % str(len(tasks) + 1), 4)
         tasks.append(new_task)
         s.add(new_task[0] == card[0])
@@ -246,28 +254,10 @@ def main():
                   f'{COLOUR_NAMES[card[0]]:{COLOUR_NAME_WIDTH}} '
                   f'{card[1]:>{CARD_VALUE_WIDTH}})')
 
-    def add_special_task_no_tricks_value(
-            forbidden_value: int, print_task: bool = True) -> None:
-        assert 0 < forbidden_value <= CARD_MAX_VALUE
-
-        # No trick may be won with a card of the given value.
-        for j in range(NUMBER_OF_TRICKS):
-            for i in range(NUMBER_OF_PLAYERS):
-                s.add(Implies(cards[j][i][1] == forbidden_value,
-                              cards[j][i][0] != active_colours[j]))
-        if print_task:
-            print('Special task: No tricks may be won '
-                  f'with cards of value {forbidden_value}.')
-
-    def add_task_constraint_absolute_order(
-            number_of_tasks: int = 1, start_trick: int = 1,
-            consecutive: bool = True, print_task: bool = True) -> None:
-        pass  # (TODO)
-
-    def add_task_constraint_relative_order(
-            number_of_tasks: int, print_task: bool = True) -> None:
-        assert 1 < number_of_tasks <= len(tasks)
-        ordered_tasks = random.sample(task_cards, number_of_tasks)
+    def add_task_constraint_relative_order(ordered_tasks: tuple[Card, ...],
+                                           print_task: bool = True) -> None:
+        assert 1 < len(ordered_tasks) <= len(tasks)
+        assert all([valid_card(card) for card in ordered_tasks])
 
         # If a trick contains one of the order-constrained task cards, the
         # subsequent order-constrained task card must be played in a later
@@ -281,7 +271,7 @@ def main():
                                       next_task[1] == c[1])
                                   for k in range(j + 1,
                                                  NUMBER_OF_TRICKS + i -
-                                                 number_of_tasks)
+                                                 len(ordered_tasks))
                                   for c in cards[k]])))
             if print_task:
                 print('Task order constraint (relative): ('
@@ -291,13 +281,44 @@ def main():
                       f'{COLOUR_NAMES[next_task[0]]:{COLOUR_NAME_WIDTH}} '
                       f'{next_task[1]:>{CARD_VALUE_WIDTH}}).')
 
+    def add_task_constraint_absolute_order(ordered_tasks: tuple[Card, ...],
+                                           print_task: bool = True) -> None:
+        assert 1 <= len(ordered_tasks) <= len(tasks)
+        assert all([valid_card(card) for card in ordered_tasks])
+
+        # Absolute order is specified as a set of relative order constraints.
+        if len(ordered_tasks) > 1:
+            add_task_constraint_relative_order(ordered_tasks, False)
+        for i, o_task in enumerate(ordered_tasks):
+            for u_task in [u_t for u_t in task_cards
+                           if u_t not in ordered_tasks]:
+                add_task_constraint_relative_order((o_task, u_task), False)
+            if print_task:
+                print('Task order constraint (absolute): ('
+                      f'{COLOUR_NAMES[o_task[0]]:{COLOUR_NAME_WIDTH}} '
+                      f'{o_task[1]:>{CARD_VALUE_WIDTH}}) '
+                      f'must be number {i + 1} in the order of all '
+                      f'{len(tasks)} completed tasks.')
+
+    def add_special_task_no_tricks_value(
+            forbidden_value: int, print_task: bool = True) -> None:
+        assert 0 < forbidden_value <= CARD_MAX_VALUE
+
+        # No trick may be won with a card of the given value.
+        for j in range(NUMBER_OF_TRICKS):
+            for i in range(NUMBER_OF_PLAYERS):
+                s.add(Implies(cards[j][i][1] == forbidden_value,
+                              cards[j][i][0] != active_colours[j]))
+        if print_task:
+            print('Special task: No tricks may be won '
+                  f'with cards of value {forbidden_value}.')
+
     # Add tasks.
     for i in sorted(random.sample(range(1, NUMBER_OF_PLAYERS + 1), 3)):
         add_card_task(i)
-    # add_special_task_no_tricks_value(CARD_MAX_VALUE)
-    # add_task_constraint_absolute_order(
-    #     start_trick=random.choice(range(1, NUMBER_OF_TRICKS + 1)))
-    # add_task_constraint_relative_order(2)
+    add_task_constraint_relative_order(random.sample(task_cards, 2))
+    add_task_constraint_absolute_order(random.sample(task_cards, 1))
+    add_special_task_no_tricks_value(CARD_MAX_VALUE)
 
     def timing_info(start_time):
         duration = time.time() - start_time
