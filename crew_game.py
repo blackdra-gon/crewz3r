@@ -19,6 +19,9 @@ NUMBER_OF_PLAYERS = 4
 # Trump cards can entirely be toggled on and off.
 USE_TRUMP_CARDS = True
 
+# Trump cards will be created ranging from 1 to this value, inclusive.
+TRUMP_CARD_MAX_VALUE = 4
+
 # The player with the highest trump card starts the first trick.
 # Disable to allow for more solving options with different start players.
 HIGHEST_TRUMP_STARTS_FIRST_TRICK = True
@@ -29,8 +32,10 @@ TRUMP_COLOUR = -1
 
 NUMBER_OF_CARDS = NUMBER_OF_COLOURS * CARD_MAX_VALUE
 if USE_TRUMP_CARDS:
-    NUMBER_OF_CARDS += NUMBER_OF_PLAYERS
-assert NUMBER_OF_CARDS % NUMBER_OF_PLAYERS == 0
+    NUMBER_OF_CARDS += TRUMP_CARD_MAX_VALUE
+assert NUMBER_OF_CARDS % NUMBER_OF_PLAYERS == 0, \
+    (f'The number of {NUMBER_OF_CARDS} cards can\'t be evenly distributed '
+     f'between {NUMBER_OF_PLAYERS} players.')
 NUMBER_OF_TRICKS = NUMBER_OF_CARDS // NUMBER_OF_PLAYERS
 
 # Table formatting parameters.
@@ -73,7 +78,7 @@ def deal_cards(print_distribution: bool = True) -> list[list[Card]]:
     remaining_cards = [(color, value) for color in range(NUMBER_OF_COLOURS)
                        for value in range(1, CARD_MAX_VALUE + 1)] + \
                       [(TRUMP_COLOUR, value)
-                       for value in range(1, NUMBER_OF_PLAYERS + 1)
+                       for value in range(1, TRUMP_CARD_MAX_VALUE + 1)
                        if USE_TRUMP_CARDS]
     hands = []
     for i in range(NUMBER_OF_PLAYERS):
@@ -132,8 +137,9 @@ def main():
     # The player with the highest trump card starts the first trick.
     if USE_TRUMP_CARDS and HIGHEST_TRUMP_STARTS_FIRST_TRICK:
         for i in range(NUMBER_OF_PLAYERS):
-            s.add(Implies((TRUMP_COLOUR, NUMBER_OF_PLAYERS) in player_hands[i],
-                          starting_players[0] == i + 1))
+            s.add(Implies(
+                (TRUMP_COLOUR, TRUMP_CARD_MAX_VALUE) in player_hands[i],
+                starting_players[0] == i + 1))
 
     for j in range(NUMBER_OF_TRICKS):
 
@@ -164,9 +170,9 @@ def main():
             s.add(0 < value)
             s.add(value <= CARD_MAX_VALUE)
 
-            # Trump cards are limited in number to one per player.
+            # Only valid trump card values may be used.
             s.add(Implies(colour == TRUMP_COLOUR,
-                          value <= NUMBER_OF_PLAYERS))
+                          value <= TRUMP_CARD_MAX_VALUE))
 
             # Players may only play cards that they hold.
             s.add(Or([And(colour == c[0], value == c[1])
