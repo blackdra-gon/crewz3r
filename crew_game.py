@@ -58,7 +58,8 @@ COLUMN_HEADERS = ['Trick', 'Starting', 'A'] + \
 COLOUR_NAMES = ('R', 'G', 'B', 'Y', 'X')  # Last name reserved for trump cards.
 
 assert NUMBER_OF_COLOURS < len(COLOUR_NAMES)
-COLOUR_NAME_WIDTH = max(map(len, COLOUR_NAMES[:NUMBER_OF_COLOURS]))
+COLOUR_NAME_WIDTH = max(map(len, COLOUR_NAMES[:NUMBER_OF_COLOURS] +
+                            (COLOUR_NAMES[-1], ) if USE_TRUMP_CARDS else ()))
 CARD_VALUE_WIDTH = len(str(CARD_MAX_VALUE))
 START_MARKER_WIDTH = len(START_MARKER) if MARK_START else 0
 TASK_MARKER_WIDTH = len(TASK_MARKER) if MARK_TASK else 0
@@ -337,8 +338,8 @@ def main():
         add_card_task(i)
     # add_task_constraint_relative_order(random.sample(task_cards, 2))
     # add_task_constraint_absolute_order(random.sample(task_cards, 1))
-    add_task_constraint_absolute_order_last(random.choice(task_cards))
-    add_special_task_no_tricks_value(CARD_MAX_VALUE)
+    # add_task_constraint_absolute_order_last(random.choice(task_cards))
+    # add_special_task_no_tricks_value(CARD_MAX_VALUE)
 
     def timing_info(start_time):
         duration = time.time() - start_time
