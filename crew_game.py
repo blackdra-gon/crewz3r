@@ -10,25 +10,23 @@ from z3 import And, Distinct, Implies, Int, IntVector, Or, sat, Solver, \
 Card: TypeAlias = tuple[int, int]
 
 
-class CrewGame(object):
+class CrewGameBase(object):
 
-    def __init__(self,
-                 number_of_players: int = 4,
-                 number_of_colours: int = 4,
-                 card_max_value: int = 9,
-                 use_trump_cards: bool = True,
-                 trump_card_max_value: int = 4) -> None:
+    def __init__(self, number_of_players: int, number_of_colours: int,
+                 card_max_value: int, use_trump_cards: bool,
+                 trump_card_max_value: int) -> None:
 
         assert number_of_players >= 2
+        assert number_of_colours >= 1
+        assert card_max_value >= 1
+
         # The number of players for which to solve the game.
         self.NUMBER_OF_PLAYERS: int = number_of_players
 
-        assert number_of_colours >= 1
         # The number of different colours. Trump cards (if active) are not
         # counted.
         self.NUMBER_OF_COLOURS: int = number_of_colours
 
-        assert card_max_value >= 1
         # Cards of each colour will be created ranging from 1 to this value,
         # inclusive.
         self.CARD_MAX_VALUE: int = card_max_value
@@ -69,7 +67,7 @@ class CrewGame(object):
         self._init_table_setup()
 
         # Stores the distribution of cards between the players.
-        self.player_hands: list[list[Card]] = self.deal_cards()
+        self.player_hands: list[list[Card]] = self._deal_cards()
 
         self._init_solver_setup()
         self._init_tasks_setup()
@@ -131,6 +129,28 @@ class CrewGame(object):
             'task_completion':
                 len(self.table_elements['task_completion_marker']),
         }
+
+    def _deal_cards(self, print_distribution: bool = True) -> list[list[Card]]:
+        remaining_cards = [(color, value)
+                           for color in range(self.NUMBER_OF_COLOURS)
+                           for value in range(1, self.CARD_MAX_VALUE + 1)] + \
+                          [(self.TRUMP_COLOUR, value)
+                           for value in range(1, self.TRUMP_CARD_MAX_VALUE + 1)
+                           if self.rules['use_trump_cards']]
+        hands = []
+        for i in range(self.NUMBER_OF_PLAYERS):
+            hand = sorted(random.sample(remaining_cards, self.NUMBER_OF_TRICKS))
+            for card in hand:
+                remaining_cards.remove(card)
+            hands.append(hand)
+
+        if print_distribution:
+            print('\nCard distribution:')
+            for i, cs in enumerate(hands):
+                print(f'{self.table_elements["player_prefix"]}'
+                      f'{i + 1}:', end=' ')
+                print(', '.join([self._card_string(c) for c in cs]))
+        return hands
 
     def _init_solver_setup(self):
         # A card is represented by two integers.
@@ -201,7 +221,7 @@ class CrewGame(object):
                 s.add(Or([And(colour == c[0], value == c[1])
                           for c in self.player_hands[i]]))
 
-                # If a player wins a trick, that player is the starting player 
+                # If a player wins a trick, that player is the starting player
                 # in the next trick.
                 if j + 1 != self.NUMBER_OF_TRICKS:
                     s.add(Implies(trick_winner == player,
@@ -226,8 +246,8 @@ class CrewGame(object):
 
                 # Case 2: The player has not played a trump card and no trump
                 # card is present in the trick.
-                # If the player's card is of the active colour and higher 
-                # than all other cards of the active colour in the trick, 
+                # If the player's card is of the active colour and higher
+                # than all other cards of the active colour in the trick,
                 # that player has won the trick.
                 s.add(Implies(And(colour == active_colour,
                                   And([And(self.cards[j][k][0] !=
@@ -259,27 +279,24 @@ class CrewGame(object):
         return (f'({self.COLOUR_NAMES[card[0]]:{width}} '
                 f'{card[1]:>{self.table_element_widths["card_value"]}})')
 
-    def deal_cards(self, print_distribution: bool = True) -> list[list[Card]]:
-        remaining_cards = [(color, value)
-                           for color in range(self.NUMBER_OF_COLOURS)
-                           for value in range(1, self.CARD_MAX_VALUE + 1)] + \
-                          [(self.TRUMP_COLOUR, value)
-                           for value in range(1, self.TRUMP_CARD_MAX_VALUE + 1)
-                           if self.rules['use_trump_cards']]
-        hands = []
-        for i in range(self.NUMBER_OF_PLAYERS):
-            hand = sorted(random.sample(remaining_cards, self.NUMBER_OF_TRICKS))
-            for card in hand:
-                remaining_cards.remove(card)
-            hands.append(hand)
+    def check(self, print_time: bool = True) -> None:
+        start_time = time.time()
+        self.check_result = self.solver.check()
+        duration = time.time() - start_time
+        if print_time:
+            print(f'\nSolving took {int(duration // 60)}m '
+                  f'{duration % 60:.1f}s.')
+        self.is_solved = True
 
-        if print_distribution:
-            print('\nCard distribution:')
-            for i, cs in enumerate(hands):
-                print(f'{self.table_elements["player_prefix"]}'
-                      f'{i + 1}:', end=' ')
-                print(', '.join([self._card_string(c) for c in cs]))
-        return hands
+
+class CrewGame(CrewGameBase):
+
+    def __init__(self, number_of_players: int = 4, number_of_colours: int = 4,
+                 card_max_value: int = 9, use_trump_cards: bool = True,
+                 trump_card_max_value: int = 4) -> None:
+
+        super().__init__(number_of_players, number_of_colours,
+                         card_max_value, use_trump_cards, trump_card_max_value)
 
     def add_card_task(self, tasked_player: int, card: Card = None,
                       print_task: bool = True) -> None:
@@ -384,15 +401,6 @@ class CrewGame(object):
         if print_task:
             print('Special task: No tricks may be won '
                   f'with cards of value {forbidden_value}.')
-
-    def check(self, print_time: bool = True) -> None:
-        start_time = time.time()
-        self.check_result = self.solver.check()
-        duration = time.time() - start_time
-        if print_time:
-            print(f'\nSolving took {int(duration // 60)}m '
-                  f'{duration % 60:.1f}s.')
-        self.is_solved = True
 
     def print_solution(self) -> None:
 
