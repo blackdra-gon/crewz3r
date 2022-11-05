@@ -5,8 +5,6 @@ from typing import TypeAlias, Optional
 from z3 import And, Distinct, Implies, Int, IntVector, Or, sat, Solver, \
     CheckSatResult
 
-
-
 # Type alias for cards: The first integer represents the color (or suit),
 # the second determines the card value.
 Card: TypeAlias = tuple[int, int]
@@ -17,7 +15,8 @@ class CrewGameBase(object):
     def __init__(self, number_of_players: int, number_of_colours: int,
                  card_max_value: int, use_trump_cards: bool,
                  trump_card_max_value: int,
-                 cards_distribution: list[list[Card]] = None) -> None:
+                 cards_distribution: list[list[Card]] = None,
+                 first_starting_player=None) -> None:
 
         assert number_of_players >= 2
         assert number_of_colours >= 1
@@ -45,6 +44,10 @@ class CrewGameBase(object):
             'use_trump_cards': use_trump_cards,
             'highest_trump_starts_first_trick': True,
         }
+        # When the first starting player is given
+        if first_starting_player:
+            self.rules['highest_trump_starts_first_trick'] = False
+            self.first_starting_player = first_starting_player
 
         # If the solver has been run.
         self.is_solved: bool = False
@@ -56,8 +59,6 @@ class CrewGameBase(object):
         # Last name reserved for trump cards.
         self.COLOUR_NAMES = ('R', 'G', 'B', 'Y', 'P', 'N', 'X')
         assert self.NUMBER_OF_COLOURS < len(self.COLOUR_NAMES)
-
-
 
         # The total number of cards in the game.
         if not cards_distribution:
@@ -81,7 +82,6 @@ class CrewGameBase(object):
             self.NUMBER_OF_TRICKS = len(cards_distribution[0])
             # TODO: Check that there are no duplicate card in the given distribution
             self.player_hands: list[list[Card]] = cards_distribution
-
 
         self._init_table_setup()
 
@@ -200,6 +200,8 @@ class CrewGameBase(object):
                     (self.TRUMP_COLOUR, self.TRUMP_CARD_MAX_VALUE)
                     in self.player_hands[i],
                     self.starting_players[0] == i + 1))
+        elif self.first_starting_player:
+            self.solver.add(self.starting_players[0] == self.first_starting_player)
 
         for j in range(self.NUMBER_OF_TRICKS):
 
@@ -312,10 +314,12 @@ class CrewGame(CrewGameBase):
     def __init__(self, number_of_players: int = 4, number_of_colours: int = 4,
                  card_max_value: int = 9, use_trump_cards: bool = True,
                  trump_card_max_value: int = 4,
-                 cards_distribution: list[list[Card]] = None) -> None:
+                 cards_distribution: list[list[Card]] = None,
+                 first_starting_player: int = None) -> None:
 
         super().__init__(number_of_players, number_of_colours,
-                         card_max_value, use_trump_cards, trump_card_max_value, cards_distribution)
+                         card_max_value, use_trump_cards, trump_card_max_value, cards_distribution,
+                         first_starting_player)
 
     def add_card_task(self, tasked_player: int, card: Card = None,
                       print_task: bool = True) -> None:
@@ -367,7 +371,6 @@ class CrewGame(CrewGameBase):
                 print('Task order constraint (relative): '
                       f'{self._card_string(o_task)} must be completed before '
                       f'{self._card_string(next_task)}.')
-
 
     def add_task_constraint_absolute_order(
             self, ordered_tasks: tuple[Card, ...],
@@ -478,7 +481,6 @@ class CrewGame(CrewGameBase):
 
 def print_table(headers: list[str], lines: list[list[str]],
                 content_widths: list[int], column_separator: str) -> None:
-
     assert len(headers) == len(content_widths)
     assert all([len(line) == len(headers) for line in lines])
 
@@ -492,5 +494,3 @@ def print_table(headers: list[str], lines: list[list[str]],
     for line in lines:
         print(column_separator.join([f'{element:^{column_widths[i]}}'
                                      for i, element in enumerate(line)]))
-
-
