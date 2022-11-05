@@ -5,6 +5,8 @@ from typing import TypeAlias, Optional
 from z3 import And, Distinct, Implies, Int, IntVector, Or, sat, Solver, \
     CheckSatResult
 
+
+
 # Type alias for cards: The first integer represents the color (or suit),
 # the second determines the card value.
 Card: TypeAlias = tuple[int, int]
@@ -14,7 +16,8 @@ class CrewGameBase(object):
 
     def __init__(self, number_of_players: int, number_of_colours: int,
                  card_max_value: int, use_trump_cards: bool,
-                 trump_card_max_value: int) -> None:
+                 trump_card_max_value: int,
+                 cards_distribution: list[list[Card]] = None) -> None:
 
         assert number_of_players >= 2
         assert number_of_colours >= 1
@@ -34,23 +37,8 @@ class CrewGameBase(object):
         # Trump cards will be created ranging from 1 to this value, inclusive.
         self.TRUMP_CARD_MAX_VALUE: int = trump_card_max_value
 
-        # The total number of cards in the game.
-        self.NUMBER_OF_CARDS = self.NUMBER_OF_COLOURS * self.CARD_MAX_VALUE
-        self.NUMBER_OF_CARDS += trump_card_max_value if use_trump_cards else 0
-        assert self.NUMBER_OF_CARDS % number_of_players == 0, \
-            (f'The number of {self.NUMBER_OF_CARDS} cards can\'t be '
-             f'evenly distributed between {number_of_players} players.')
-
-        # The number of tricks that will be played in the game.
-        self.NUMBER_OF_TRICKS = self.NUMBER_OF_CARDS // self.NUMBER_OF_PLAYERS
-
         # Internal constant representing the colour of trump cards.
         self.TRUMP_COLOUR = -1
-
-        # Text representation of colours.
-        # Last name reserved for trump cards.
-        self.COLOUR_NAMES = ('R', 'G', 'B', 'Y', 'P', 'N', 'X')
-        assert self.NUMBER_OF_COLOURS < len(self.COLOUR_NAMES)
 
         # Rules for the game and the game setup.
         self.rules: dict[str, bool] = {
@@ -64,10 +52,40 @@ class CrewGameBase(object):
         # The solver result.
         self.check_result: Optional[CheckSatResult] = None
 
+        # Text representation of colours.
+        # Last name reserved for trump cards.
+        self.COLOUR_NAMES = ('R', 'G', 'B', 'Y', 'P', 'N', 'X')
+        assert self.NUMBER_OF_COLOURS < len(self.COLOUR_NAMES)
+
+
+
+        # The total number of cards in the game.
+        if not cards_distribution:
+            # for a random game
+            self.NUMBER_OF_CARDS = self.NUMBER_OF_COLOURS * self.CARD_MAX_VALUE
+            self.NUMBER_OF_CARDS += trump_card_max_value if use_trump_cards else 0
+            assert self.NUMBER_OF_CARDS % number_of_players == 0, \
+                (f'The number of {self.NUMBER_OF_CARDS} cards can\'t be '
+                 f'evenly distributed between {number_of_players} players.')
+
+            # The number of tricks that will be played in the game.
+            self.NUMBER_OF_TRICKS = self.NUMBER_OF_CARDS // self.NUMBER_OF_PLAYERS
+
+            # Stores the distribution of cards between the players.
+            self.player_hands: list[list[Card]] = self._deal_cards()
+        else:
+            # for a given card distribution
+            assert len(cards_distribution) == self.NUMBER_OF_PLAYERS
+            for player_hand in cards_distribution:
+                assert len(player_hand) == len(cards_distribution[0])
+            self.NUMBER_OF_TRICKS = len(cards_distribution[0])
+            # TODO: Check that there are no duplicate card in the given distribution
+            self.player_hands: list[list[Card]] = cards_distribution
+
+
         self._init_table_setup()
 
-        # Stores the distribution of cards between the players.
-        self.player_hands: list[list[Card]] = self._deal_cards()
+        self._print_card_distribution()
 
         self._init_solver_setup()
         self._init_tasks_setup()
@@ -130,7 +148,7 @@ class CrewGameBase(object):
                 len(self.table_elements['task_completion_marker']),
         }
 
-    def _deal_cards(self, print_distribution: bool = True) -> list[list[Card]]:
+    def _deal_cards(self) -> list[list[Card]]:
         remaining_cards = [(color, value)
                            for color in range(self.NUMBER_OF_COLOURS)
                            for value in range(1, self.CARD_MAX_VALUE + 1)] + \
@@ -143,14 +161,14 @@ class CrewGameBase(object):
             for card in hand:
                 remaining_cards.remove(card)
             hands.append(hand)
-
-        if print_distribution:
-            print('\nCard distribution:')
-            for i, cs in enumerate(hands):
-                print(f'{self.table_elements["player_prefix"]}'
-                      f'{i + 1}:', end=' ')
-                print(', '.join([self._card_string(c) for c in cs]))
         return hands
+
+    def _print_card_distribution(self):
+        print('\nCard distribution:')
+        for i, cs in enumerate(self.player_hands):
+            print(f'{self.table_elements["player_prefix"]}'
+                  f'{i + 1}:', end=' ')
+            print(', '.join([self._card_string(c) for c in cs]))
 
     def _init_solver_setup(self):
         # A card is represented by two integers.
@@ -293,10 +311,11 @@ class CrewGame(CrewGameBase):
 
     def __init__(self, number_of_players: int = 4, number_of_colours: int = 4,
                  card_max_value: int = 9, use_trump_cards: bool = True,
-                 trump_card_max_value: int = 4) -> None:
+                 trump_card_max_value: int = 4,
+                 cards_distribution: list[list[Card]] = None) -> None:
 
         super().__init__(number_of_players, number_of_colours,
-                         card_max_value, use_trump_cards, trump_card_max_value)
+                         card_max_value, use_trump_cards, trump_card_max_value, cards_distribution)
 
     def add_card_task(self, tasked_player: int, card: Card = None,
                       print_task: bool = True) -> None:
