@@ -357,25 +357,17 @@ class CrewGame(CrewGameBase):
         assert 1 < len(ordered_tasks) <= len(self.tasks)
         assert all([self._valid_card(card) for card in ordered_tasks])
 
-        # If a trick contains one of the order-constrained task cards, the
-        # subsequent order-constrained task card must be played in a later
-        # trick.
         for i, o_task in enumerate(ordered_tasks[:-1]):
+            task_index = self.task_cards.index(o_task)
             next_task = ordered_tasks[i + 1]
-            for j in range(self.NUMBER_OF_TRICKS):
-                self.solver.add(
-                    Implies(Or([And(o_task[0] == c[0],
-                                    o_task[1] == c[1])
-                                for c in self.cards[j]]),
-                            Or([And(next_task[0] == c[0],
-                                    next_task[1] == c[1])
-                                for k in range(j + 1, self.NUMBER_OF_TRICKS +
-                                               i - len(ordered_tasks))
-                                for c in self.cards[k]])))
+            next_task_index = self.task_cards.index(next_task)
+            # using the fourth field of a task, which stores the trick in which it is fulfilled
+            self.solver.add(self.tasks[task_index][3] <= self.tasks[next_task_index][3])
             if print_task:
                 print('Task order constraint (relative): '
                       f'{self._card_string(o_task)} must be completed before '
                       f'{self._card_string(next_task)}.')
+
 
     def add_task_constraint_absolute_order(
             self, ordered_tasks: tuple[Card, ...],
