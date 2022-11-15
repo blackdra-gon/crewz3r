@@ -5,13 +5,8 @@ import time
 hostName = "localhost"
 serverPort = 8080
 
-class MyServer(SimpleHTTPRequestHandler):
-    def do_GET(self):
-        self.path = 'index.html'
-        return SimpleHTTPRequestHandler.do_GET(self)
-
 if __name__ == "__main__":
-    webServer = HTTPServer((hostName, serverPort), MyServer)
+    webServer = HTTPServer((hostName, serverPort), SimpleHTTPRequestHandler)
     print("Server started http://%s:%s" % (hostName, serverPort))
 
     try:
