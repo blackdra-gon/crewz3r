@@ -5,6 +5,8 @@ from typing import TypeAlias, Optional
 from z3 import And, Distinct, Implies, Int, IntVector, Or, sat, Solver, \
     CheckSatResult
 
+from crew_utils import deal_cards
+
 # Type alias for cards: The first integer represents the color (or suit),
 # the second determines the card value.
 Card: TypeAlias = tuple[int, int]
@@ -73,7 +75,8 @@ class CrewGameBase(object):
             self.NUMBER_OF_TRICKS = self.NUMBER_OF_CARDS // self.NUMBER_OF_PLAYERS
 
             # Stores the distribution of cards between the players.
-            self.player_hands: list[list[Card]] = self._deal_cards()
+            self.player_hands: list[list[Card]] = deal_cards(self.NUMBER_OF_PLAYERS, self.NUMBER_OF_COLOURS,
+                                                             self.CARD_MAX_VALUE, self.TRUMP_CARD_MAX_VALUE)
         else:
             # for a given card distribution
             assert len(cards_distribution) == self.NUMBER_OF_PLAYERS
@@ -147,21 +150,6 @@ class CrewGameBase(object):
             'task_completion':
                 len(self.table_elements['task_completion_marker']),
         }
-
-    def _deal_cards(self) -> list[list[Card]]:
-        remaining_cards = [(color, value)
-                           for color in range(self.NUMBER_OF_COLOURS)
-                           for value in range(1, self.CARD_MAX_VALUE + 1)] + \
-                          [(self.TRUMP_COLOUR, value)
-                           for value in range(1, self.TRUMP_CARD_MAX_VALUE + 1)
-                           if self.rules['use_trump_cards']]
-        hands = []
-        for i in range(self.NUMBER_OF_PLAYERS):
-            hand = sorted(random.sample(remaining_cards, self.NUMBER_OF_TRICKS))
-            for card in hand:
-                remaining_cards.remove(card)
-            hands.append(hand)
-        return hands
 
     def _print_card_distribution(self):
         print('\nCard distribution:')
