@@ -1,6 +1,6 @@
 import json
 
-from flask import Flask, request
+from flask import Flask, request, render_template
 from flask_socketio import SocketIO, emit, send
 
 app = Flask(__name__)
@@ -71,6 +71,10 @@ def disconnect():
     emit('user list', json.dumps(users), broadcast=True)
     print('disconnected: ', request.sid, ' user count: ' + str(len(users)))
 
+@app.route('/')
+def index():
+    return render_template('index.html')
+
 # If you are running it using python <filename> then below command will be used
 if __name__ == '__main__':
-    socketio.run(app)
+    socketio.run(app, host="0.0.0.0")
