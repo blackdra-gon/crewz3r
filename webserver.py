@@ -2,7 +2,7 @@
 from http.server import SimpleHTTPRequestHandler, HTTPServer
 import time
 
-hostName = "localhost"
+hostName = "0.0.0.0"
 serverPort = 8080
 
 if __name__ == "__main__":
