@@ -7,8 +7,12 @@ const emit_name = () => {
 }
 
 socket.on('connect', () => {
-    console.log("socket connected");
+    document.getElementById("connection-banner").classList.add("connected");
     emit_name();
+});
+
+socket.on('disconnect', () => {
+    document.getElementById("connection-banner").classList.remove("connected");
 });
 
 socket.on('user list', (user_string) => {
