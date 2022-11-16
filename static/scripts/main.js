@@ -1,4 +1,4 @@
-const socket = io('http://localhost:5000');
+const socket = io();
 
 // Sends name to server
 const emit_name = () => {
