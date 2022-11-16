@@ -1,0 +1,9 @@
+main .in_game {
+    display: none;
+}
+main.game_started .start {
+    display: none;
+}
+main.game_started .in_game {
+    display: block;
+}

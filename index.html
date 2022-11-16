@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="styles/main.css">
+        <script type="text/javascript" src="scripts/socket.io.min.js" defer></script>
+        <script src="scripts/main.js" defer></script>
+    </head>
+    <body>
+        <main>
+            <!-- Start page -->
+            <div class="start">
+                <p><span data-user-count>0</span> in der Lobby</p>
+                <ul id="users"></ul>
+                <form id="name">
+                    <input type="text" name="name">
+                    <button type="submit">Name ändern</button>
+                </form>
+                <button type="button" id="start_game">Spiel starten</button>
+            </div>
+            <!-- Game page -->
+            <div class="in_game">
+                <button type="button" id="end_game">Spiel beenden</button>
+                <form id="card"></form>
+            </div>
+        </main>
+    </body>
+</html>
