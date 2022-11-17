@@ -5,7 +5,7 @@ from typing import TypeAlias, Optional
 from z3 import And, Distinct, Implies, Int, IntVector, Or, sat, Solver, \
     CheckSatResult
 
-from crew_utils import Card, deal_cards
+from crew_utils import Card, deal_cards, CrewGameState
 
 
 class CrewGameBase(object):
@@ -314,6 +314,16 @@ class CrewGame(CrewGameBase):
         super().__init__(number_of_players, number_of_colours,
                          card_max_value, use_trump_cards, trump_card_max_value,
                          cards_distribution, first_starting_player)
+
+    # This function assumes that a standard crew card deck with 4*9+4 cards is used
+    @classmethod
+    def crew_game_from_game_state(cls, game_state: CrewGameState):
+        game = cls(cards_distribution=game_state.hands, first_starting_player=game_state.active_player)
+        for task in game_state.tasks:
+            game.add_card_task(task.player, task.card)
+            # TODO: Add order constraints to game object.
+        return game
+
 
     def add_card_task(self, tasked_player: int, card: Card = None,
                       print_task: bool = True) -> None:

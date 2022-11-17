@@ -6,7 +6,22 @@ from typing import TypeAlias
 # the second determines the card value.
 Card: TypeAlias = tuple[int, int]
 
-Task: TypeAlias = None  # TODO: specify representation of a task
+
+# Class representing a task assigned to a player
+# If order_constraint == 0, there is no order constraint.
+# If relative_constraint == False, we have an absolute order constraint.
+# In this case -1 means: The task has to be fulfilled at last.
+class Task:
+
+    def __init__(self, card: Card, player: int, order_constraint=0, relative_constraint=False):
+        if relative_constraint:
+            assert order_constraint in (0, 1, 2, 3, 4)
+        else:
+            assert order_constraint in (-1, 0, 1, 2, 3, 4, 5)
+        self.card = card
+        self.player = player
+        self.order_constraint: int = order_constraint
+        self.relative_constraint: bool = relative_constraint
 
 
 def deal_cards(number_of_players: int,
@@ -31,7 +46,7 @@ def deal_cards(number_of_players: int,
         hands.append(hand)
     return hands
 
-
+# If the first starting player shall be determined by the highest trump card, active_player should be set to None
 @dataclass
 class CrewGameState(object):
     hands: list[list[Card]]
