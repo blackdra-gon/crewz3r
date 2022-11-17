@@ -1,9 +1,11 @@
 main .in_game {
     display: none;
 }
+
 main.game_started .start {
     display: none;
 }
+
 main.game_started .in_game {
     display: block;
 }
@@ -20,16 +22,20 @@ main.game_started .in_game {
     transition: 0.5s opacity 1s, 0.3s background-color;
     pointer-events: none;
 }
+
 #connection-banner .connected {
     display: none;
 }
+
 #connection-banner.connected {
     background: green;
     opacity: 0;
 }
+
 #connection-banner.connected .connected {
     display: block;
 }
+
 #connection-banner.connected .not-connected {
     display: none;
 }

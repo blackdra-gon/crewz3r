@@ -66,24 +66,28 @@ class CrewGameBase(object):
         if not cards_distribution:
             # for a random game
             self.NUMBER_OF_CARDS = self.NUMBER_OF_COLOURS * self.CARD_MAX_VALUE
-            self.NUMBER_OF_CARDS += trump_card_max_value if use_trump_cards else 0
+            self.NUMBER_OF_CARDS +=\
+                trump_card_max_value if use_trump_cards else 0
             assert self.NUMBER_OF_CARDS % number_of_players == 0, \
                 (f'The number of {self.NUMBER_OF_CARDS} cards can\'t be '
                  f'evenly distributed between {number_of_players} players.')
 
             # The number of tricks that will be played in the game.
-            self.NUMBER_OF_TRICKS = self.NUMBER_OF_CARDS // self.NUMBER_OF_PLAYERS
+            self.NUMBER_OF_TRICKS =\
+                self.NUMBER_OF_CARDS // self.NUMBER_OF_PLAYERS
 
             # Stores the distribution of cards between the players.
-            self.player_hands: list[list[Card]] = deal_cards(self.NUMBER_OF_PLAYERS, self.NUMBER_OF_COLOURS,
-                                                             self.CARD_MAX_VALUE, self.TRUMP_CARD_MAX_VALUE)
+            self.player_hands: list[list[Card]] = deal_cards(
+                self.NUMBER_OF_PLAYERS, self.NUMBER_OF_COLOURS,
+                self.CARD_MAX_VALUE, self.TRUMP_CARD_MAX_VALUE)
         else:
             # for a given card distribution
             assert len(cards_distribution) == self.NUMBER_OF_PLAYERS
             for player_hand in cards_distribution:
                 assert len(player_hand) == len(cards_distribution[0])
             self.NUMBER_OF_TRICKS = len(cards_distribution[0])
-            # TODO: Check that there are no duplicate card in the given distribution
+            # TODO: Check that there are no duplicate card in the given
+            #  distribution
             self.player_hands: list[list[Card]] = cards_distribution
 
         self._init_table_setup()
@@ -189,7 +193,8 @@ class CrewGameBase(object):
                     in self.player_hands[i],
                     self.starting_players[0] == i + 1))
         elif self.first_starting_player:
-            self.solver.add(self.starting_players[0] == self.first_starting_player)
+            self.solver.add(
+                self.starting_players[0] == self.first_starting_player)
 
         for j in range(self.NUMBER_OF_TRICKS):
 
@@ -306,8 +311,8 @@ class CrewGame(CrewGameBase):
                  first_starting_player: int = None) -> None:
 
         super().__init__(number_of_players, number_of_colours,
-                         card_max_value, use_trump_cards, trump_card_max_value, cards_distribution,
-                         first_starting_player)
+                         card_max_value, use_trump_cards, trump_card_max_value,
+                         cards_distribution, first_starting_player)
 
     def add_card_task(self, tasked_player: int, card: Card = None,
                       print_task: bool = True) -> None:
@@ -353,8 +358,10 @@ class CrewGame(CrewGameBase):
             task_index = self.task_cards.index(o_task)
             next_task = ordered_tasks[i + 1]
             next_task_index = self.task_cards.index(next_task)
-            # using the fourth field of a task, which stores the trick in which it is fulfilled
-            self.solver.add(self.tasks[task_index][3] <= self.tasks[next_task_index][3])
+            # using the fourth field of a task, which stores the trick in
+            # which it is fulfilled
+            self.solver.add(
+                self.tasks[task_index][3] <= self.tasks[next_task_index][3])
             if print_task:
                 print('Task order constraint (relative): '
                       f'{self._card_string(o_task)} must be completed before '

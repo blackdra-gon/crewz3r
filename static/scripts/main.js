@@ -23,7 +23,7 @@ socket.on('user list', (user_string) => {
 
     // update user count
     user_count_element.innerText = Object.keys(users).length;
-    
+
 
     // empty and update user name list 
     users_element.innerHTML = "";
