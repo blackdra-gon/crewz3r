@@ -5,11 +5,7 @@ from typing import TypeAlias, Optional
 from z3 import And, Distinct, Implies, Int, IntVector, Or, sat, Solver, \
     CheckSatResult
 
-from crew_utils import deal_cards
-
-# Type alias for cards: The first integer represents the color (or suit),
-# the second determines the card value.
-Card: TypeAlias = tuple[int, int]
+from crew_utils import Card, deal_cards
 
 
 class CrewGameBase(object):
@@ -64,10 +60,12 @@ class CrewGameBase(object):
 
         # The total number of cards in the game.
         if not cards_distribution:
-            # for a random game
+            # For a random game:
             self.NUMBER_OF_CARDS = self.NUMBER_OF_COLOURS * self.CARD_MAX_VALUE
             self.NUMBER_OF_CARDS +=\
                 trump_card_max_value if use_trump_cards else 0
+            # The number of cards must be a multiple of the number of players
+            # so that the cards can be distributed evenly.
             assert self.NUMBER_OF_CARDS % number_of_players == 0, \
                 (f'The number of {self.NUMBER_OF_CARDS} cards can\'t be '
                  f'evenly distributed between {number_of_players} players.')
@@ -81,13 +79,16 @@ class CrewGameBase(object):
                 self.NUMBER_OF_PLAYERS, self.NUMBER_OF_COLOURS,
                 self.CARD_MAX_VALUE, self.TRUMP_CARD_MAX_VALUE)
         else:
-            # for a given card distribution
+            # For a given card distribution:
+            # The number of hands must match the number of players.
             assert len(cards_distribution) == self.NUMBER_OF_PLAYERS
+            # All hands must contain the same number of cards.
             for player_hand in cards_distribution:
                 assert len(player_hand) == len(cards_distribution[0])
+            # Each card may only occur once in the given distribution.
+            for i, card in enumerate(cards_distribution):
+                assert card not in cards_distribution[:i]
             self.NUMBER_OF_TRICKS = len(cards_distribution[0])
-            # TODO: Check that there are no duplicate card in the given
-            #  distribution
             self.player_hands: list[list[Card]] = cards_distribution
 
         self._init_table_setup()
