@@ -1,9 +1,12 @@
 import random
+from dataclasses import dataclass
 from typing import TypeAlias
 
 # Type alias for cards: The first integer represents the color (or suit),
 # the second determines the card value.
 Card: TypeAlias = tuple[int, int]
+
+Task: TypeAlias = None  # TODO: specify representation of a task
 
 
 def deal_cards(number_of_players: int,
@@ -27,6 +30,13 @@ def deal_cards(number_of_players: int,
             remaining_cards.remove(card)
         hands.append(hand)
     return hands
+
+
+@dataclass
+class CrewGameState(object):
+    hands: list[list[Card]]
+    tasks: list[Task]
+    active_player: int
 
 
 if __name__ == '__main__':
