@@ -315,15 +315,38 @@ class CrewGame(CrewGameBase):
                          card_max_value, use_trump_cards, trump_card_max_value,
                          cards_distribution, first_starting_player)
 
-    # This function assumes that a standard crew card deck with 4*9+4 cards is used
+    # This function assumes that a standard crew card deck with 4*9+4 cards is used for 4 and 5 players and 3*9+3 cards
+    # are used for 3 players
+    # Additionally we assume that we do not mix relative and absolute task order constraints
     @classmethod
     def crew_game_from_game_state(cls, game_state: CrewGameState):
-        game = cls(cards_distribution=game_state.hands, first_starting_player=game_state.active_player)
+        number_of_players = len(game_state.hands)
+        if number_of_players in [4, 5]:
+            game = cls(number_of_players=number_of_players, cards_distribution=game_state.hands,
+                       first_starting_player=game_state.active_player)
+        elif number_of_players == 3:
+            game = cls(number_of_players=number_of_players, number_of_colours=3, trump_card_max_value=3,
+                       cards_distribution=game_state.hands, first_starting_player=game_state.active_player)
+        else:
+            assert False
+        # Transform the CrewGameState tasks and task constraints
+        ordered_tasks = []
+        last_task = None
         for task in game_state.tasks:
             game.add_card_task(task.player, task.card)
-            # TODO: Add order constraints to game object.
+            if task.order_constraint > 0:
+                ordered_tasks.append(task)
+            elif task.order_constraint == -1:
+                last_task = task
+        if len(ordered_tasks) > 0:
+            ordered_tasks.sort(key=lambda task: task.order_constraint)
+            if ordered_tasks[0].relative_constraint:
+                game.add_task_constraint_relative_order(tuple([task.card for task in ordered_tasks]))
+            else:
+                game.add_task_constraint_absolute_order(tuple([task.card for task in ordered_tasks]))
+        if last_task:
+            game.add_task_constraint_absolute_order_last(last_task.card)
         return game
-
 
     def add_card_task(self, tasked_player: int, card: Card = None,
                       print_task: bool = True) -> None:
@@ -359,6 +382,8 @@ class CrewGame(CrewGameBase):
             print(f'Task for {self.table_elements["player_prefix"]}'
                   f'{tasked_player}: {self._card_string(card)}')
 
+    # parameter ordered_task: a tuple of task cards in the order, in which they have to be fulfilled
+    # has no influence on the other task cards.
     def add_task_constraint_relative_order(
             self, ordered_tasks: tuple[Card, ...],
             print_task: bool = True) -> None:
@@ -378,6 +403,8 @@ class CrewGame(CrewGameBase):
                       f'{self._card_string(o_task)} must be completed before '
                       f'{self._card_string(next_task)}.')
 
+    # parameter ordered_task: a tuple of task cards in the order, in which they have to be fulfilled
+    # all other tasks have to be fulfilled after all tasks with an absolute order are finished
     def add_task_constraint_absolute_order(
             self, ordered_tasks: tuple[Card, ...],
             print_task: bool = True) -> None:

@@ -3,7 +3,7 @@ from crew_game import CrewGame
 
 
 def main():
-    game = example_game(2)
+    game = example_game(4)
     # game = random_game()
 
     game.check()

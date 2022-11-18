@@ -1,5 +1,5 @@
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TypeAlias
 
 # Type alias for cards: The first integer represents the color (or suit),
@@ -22,6 +22,17 @@ class Task:
         self.player = player
         self.order_constraint: int = order_constraint
         self.relative_constraint: bool = relative_constraint
+
+
+class SpecialTask:
+    pass
+
+
+class NoTricksWithValue(SpecialTask):
+
+    def __init__(self, forbidden_value):
+        self.forbidden_value = forbidden_value
+
 
 
 def deal_cards(number_of_players: int,
@@ -51,8 +62,9 @@ def deal_cards(number_of_players: int,
 class CrewGameState(object):
     hands: list[list[Card]]
     tasks: list[Task]
-    active_player: int
+    active_player: int = 0
+    special_tasks: list[SpecialTask] = field(default_factory=list)
 
 
 if __name__ == '__main__':
-    print(deal_cards(4, 4, 9, 4))
+    print(deal_cards(number_of_players=3, number_of_colours=3, max_card_value=9, max_trump_value=3))
