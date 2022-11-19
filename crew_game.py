@@ -1,11 +1,12 @@
 import random
 import time
-from typing import TypeAlias, Optional
 
 from z3 import And, Distinct, Implies, Int, IntVector, Or, sat, Solver, \
     CheckSatResult
 
-from crew_utils import Card, deal_cards, CrewGameState
+from crew_types import Card, Player, CardDistribution
+from crew_utils import deal_cards, CrewGameState, CrewGameSolution, \
+    CrewGameTrick
 
 
 class CrewGameBase(object):
@@ -13,8 +14,8 @@ class CrewGameBase(object):
     def __init__(self, number_of_players: int, number_of_colours: int,
                  card_max_value: int, use_trump_cards: bool,
                  trump_card_max_value: int,
-                 cards_distribution: list[list[Card]] = None,
-                 first_starting_player=None) -> None:
+                 cards_distribution: CardDistribution = None,
+                 first_starting_player: Player | None = None) -> None:
 
         assert number_of_players >= 2
         assert number_of_colours >= 1
@@ -51,7 +52,7 @@ class CrewGameBase(object):
         self.is_solved: bool = False
 
         # The solver result.
-        self.check_result: Optional[CheckSatResult] = None
+        self.check_result: CheckSatResult | None = None
 
         # Text representation of colours.
         # Last name reserved for trump cards.
@@ -62,7 +63,7 @@ class CrewGameBase(object):
         if not cards_distribution:
             # For a random game:
             self.NUMBER_OF_CARDS = self.NUMBER_OF_COLOURS * self.CARD_MAX_VALUE
-            self.NUMBER_OF_CARDS +=\
+            self.NUMBER_OF_CARDS += \
                 trump_card_max_value if use_trump_cards else 0
             # The number of cards must be a multiple of the number of players
             # so that the cards can be distributed evenly.
@@ -71,11 +72,11 @@ class CrewGameBase(object):
                  f'evenly distributed between {number_of_players} players.')
 
             # The number of tricks that will be played in the game.
-            self.NUMBER_OF_TRICKS =\
+            self.NUMBER_OF_TRICKS = \
                 self.NUMBER_OF_CARDS // self.NUMBER_OF_PLAYERS
 
             # Stores the distribution of cards between the players.
-            self.player_hands: list[list[Card]] = deal_cards(
+            self.player_hands: CardDistribution = deal_cards(
                 self.NUMBER_OF_PLAYERS, self.NUMBER_OF_COLOURS,
                 self.CARD_MAX_VALUE, self.TRUMP_CARD_MAX_VALUE)
         else:
@@ -89,7 +90,7 @@ class CrewGameBase(object):
             for i, card in enumerate(cards_distribution):
                 assert card not in cards_distribution[:i]
             self.NUMBER_OF_TRICKS = len(cards_distribution[0])
-            self.player_hands: list[list[Card]] = cards_distribution
+            self.player_hands: CardDistribution = cards_distribution
 
         self._init_table_setup()
 
@@ -293,7 +294,7 @@ class CrewGameBase(object):
         return (f'({self.COLOUR_NAMES[card[0]]:{width}} '
                 f'{card[1]:>{self.table_element_widths["card_value"]}})')
 
-    def check(self, print_time: bool = True) -> None:
+    def solve(self, print_time: bool = True) -> None:
         start_time = time.time()
         self.check_result = self.solver.check()
         duration = time.time() - start_time
@@ -302,51 +303,55 @@ class CrewGameBase(object):
                   f'{duration % 60:.1f}s.')
         self.is_solved = True
 
+    def get_solver_result(self) -> CheckSatResult | None:
+        return self.check_result
+
 
 class CrewGame(CrewGameBase):
 
-    def __init__(self, number_of_players: int = 4, number_of_colours: int = 4,
-                 card_max_value: int = 9, use_trump_cards: bool = True,
-                 trump_card_max_value: int = 4,
-                 cards_distribution: list[list[Card]] = None,
+    def __init__(self, initial_state: CrewGameState,
+                 cards_distribution: CardDistribution = None,
                  first_starting_player: int = None) -> None:
+
+        self.initial_state = initial_state
+
+        number_of_players: int = len(initial_state.hands)
+        assert number_of_players in (3, 4, 5)
+        number_of_colours: int = 4
+        trump_card_max_value: int = 4
+        if number_of_players == 3:
+            number_of_colours = 3
+            trump_card_max_value = 3
+        card_max_value: int = 9
+        use_trump_cards: bool = True
 
         super().__init__(number_of_players, number_of_colours,
                          card_max_value, use_trump_cards, trump_card_max_value,
                          cards_distribution, first_starting_player)
 
-    # This function assumes that a standard crew card deck with 4*9+4 cards is used for 4 and 5 players and 3*9+3 cards
-    # are used for 3 players
-    # Additionally we assume that we do not mix relative and absolute task order constraints
-    @classmethod
-    def crew_game_from_game_state(cls, game_state: CrewGameState):
-        number_of_players = len(game_state.hands)
-        if number_of_players in [4, 5]:
-            game = cls(number_of_players=number_of_players, cards_distribution=game_state.hands,
-                       first_starting_player=game_state.active_player)
-        elif number_of_players == 3:
-            game = cls(number_of_players=number_of_players, number_of_colours=3, trump_card_max_value=3,
-                       cards_distribution=game_state.hands, first_starting_player=game_state.active_player)
-        else:
-            assert False
-        # Transform the CrewGameState tasks and task constraints
+        # This function assumes that a standard crew card deck with 4*9+4 cards
+        # is used for 4 and 5 players and 3*9+3 cards are used for 3 players.
+        # Additionally, we assume that we do not mix relative and absolute task
+        # order constraints.
+
         ordered_tasks = []
         last_task = None
-        for task in game_state.tasks:
-            game.add_card_task(task.player, task.card)
+        for task in initial_state.tasks:
+            self.add_card_task(task.player, task.card)
             if task.order_constraint > 0:
                 ordered_tasks.append(task)
             elif task.order_constraint == -1:
                 last_task = task
         if len(ordered_tasks) > 0:
-            ordered_tasks.sort(key=lambda task: task.order_constraint)
+            ordered_tasks.sort(key=lambda o_task: o_task.order_constraint)
             if ordered_tasks[0].relative_constraint:
-                game.add_task_constraint_relative_order(tuple([task.card for task in ordered_tasks]))
+                self.add_task_constraint_relative_order(
+                    [task.card for task in ordered_tasks])
             else:
-                game.add_task_constraint_absolute_order(tuple([task.card for task in ordered_tasks]))
+                self.add_task_constraint_absolute_order(
+                    [task.card for task in ordered_tasks])
         if last_task:
-            game.add_task_constraint_absolute_order_last(last_task.card)
-        return game
+            self.add_task_constraint_absolute_order_last(last_task.card)
 
     def add_card_task(self, tasked_player: int, card: Card = None,
                       print_task: bool = True) -> None:
@@ -382,10 +387,10 @@ class CrewGame(CrewGameBase):
             print(f'Task for {self.table_elements["player_prefix"]}'
                   f'{tasked_player}: {self._card_string(card)}')
 
-    # parameter ordered_task: a tuple of task cards in the order, in which they have to be fulfilled
-    # has no influence on the other task cards.
+    # parameter ordered_task: a tuple of task cards in the order, in which 
+    # they have to be fulfilled has no influence on the other task cards. 
     def add_task_constraint_relative_order(
-            self, ordered_tasks: tuple[Card, ...],
+            self, ordered_tasks: list[Card],
             print_task: bool = True) -> None:
         assert 1 < len(ordered_tasks) <= len(self.tasks)
         assert all([self._valid_card(card) for card in ordered_tasks])
@@ -403,10 +408,11 @@ class CrewGame(CrewGameBase):
                       f'{self._card_string(o_task)} must be completed before '
                       f'{self._card_string(next_task)}.')
 
-    # parameter ordered_task: a tuple of task cards in the order, in which they have to be fulfilled
-    # all other tasks have to be fulfilled after all tasks with an absolute order are finished
+    # parameter ordered_task: a tuple of task cards in the order, in which 
+    # they have to be fulfilled all other tasks have to be fulfilled after 
+    # all tasks with an absolute order are finished 
     def add_task_constraint_absolute_order(
-            self, ordered_tasks: tuple[Card, ...],
+            self, ordered_tasks: list[Card],
             print_task: bool = True) -> None:
         assert 1 <= len(ordered_tasks) <= len(self.tasks)
         assert all([self._valid_card(card) for card in ordered_tasks])
@@ -417,7 +423,7 @@ class CrewGame(CrewGameBase):
         for i, o_task in enumerate(ordered_tasks):
             for u_task in [u_t for u_t in self.task_cards
                            if u_t not in ordered_tasks]:
-                self.add_task_constraint_relative_order((o_task, u_task), False)
+                self.add_task_constraint_relative_order([o_task, u_task], False)
             if print_task:
                 print('Task order constraint (absolute): '
                       f'{self._card_string(o_task)} must be number {i + 1} '
@@ -429,7 +435,7 @@ class CrewGame(CrewGameBase):
 
         # Absolute order is specified as a set of relative order constraints.
         for u_task in [u_t for u_t in self.task_cards if u_t != task]:
-            self.add_task_constraint_relative_order((u_task, task), False)
+            self.add_task_constraint_relative_order([u_task, task], False)
         if print_task:
             print('Task order constraint (absolute): '
                   f'{self._card_string(task)} '
@@ -448,6 +454,30 @@ class CrewGame(CrewGameBase):
         if print_task:
             print('Special task: No tricks may be won '
                   f'with cards of value {forbidden_value}.')
+
+    def get_solution(self) -> CrewGameSolution | None:
+
+        if not self.get_solver_result():
+            return None
+
+        if self.get_solver_result() != sat:
+            raise ValueError
+
+        tricks: list[CrewGameTrick] = []
+
+        m = self.solver.model()
+        for j in range(self.NUMBER_OF_TRICKS):
+            ac = m.evaluate(self.active_colours[j]).as_long()
+            sp = m.evaluate(self.starting_players[j]).as_long()
+            wp = m.evaluate(self.trick_winners[j]).as_long()
+            cards = []
+            for i in range(self.NUMBER_OF_PLAYERS):
+                colour = m.evaluate(self.cards[j][i][0]).as_long()
+                value = m.evaluate(self.cards[j][i][1]).as_long()
+                cards.append(Card(colour, value))
+            tricks.append(CrewGameTrick(cards, ac, sp, wp))
+
+        return CrewGameSolution(self.initial_state, tricks)
 
     def print_solution(self) -> None:
 

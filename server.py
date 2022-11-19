@@ -37,7 +37,7 @@ def connect():
     users.update({request.sid: ""})
     emit('user list', json.dumps(users), broadcast=True)
     print('new connection: ', request.sid, ' user count: ' + str(len(users)))
-    if (len(players) > 0):
+    if len(players) > 0:
         emit('game started', json.dumps(players), broadcast=True)
         emit('cards updated', json.dumps(list(all_possible_cards)),
              broadcast=True)

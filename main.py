@@ -6,7 +6,7 @@ def main():
     game = example_game(4)
     # game = random_game()
 
-    game.check()
+    game.solve()
     game.print_solution()
 
 
