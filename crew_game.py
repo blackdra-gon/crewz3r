@@ -1,10 +1,8 @@
 import random
-import time
 
 from z3 import And, Distinct, Implies, Int, IntVector, Or, sat, Solver, \
     CheckSatResult
 
-from crew_print import print_initial_game_state
 from crew_types import Card, Player, CardDistribution
 from crew_utils import deal_cards, CrewGameState, CrewGameSolution, \
     CrewGameTrick
@@ -281,22 +279,12 @@ class CrewGameBase(object):
         return 0 <= card[0] < self.NUMBER_OF_COLOURS and \
                0 < card[1] <= self.CARD_MAX_VALUE
 
-    def _card_string(self, card: Card):
-        width = self.table_element_widths["colour_name"]
-        return (f'({self.COLOUR_NAMES[card[0]]:{width}} '
-                f'{card[1]:>{self.table_element_widths["card_value"]}})')
-
-    def solve(self, print_time: bool = True) -> None:
-        start_time = time.time()
+    def solve(self) -> None:
         self.check_result = self.solver.check()
-        duration = time.time() - start_time
-        if print_time:
-            print(f'\nSolving took {int(duration // 60)}m '
-                  f'{duration % 60:.1f}s.')
         self.is_solved = True
 
-    def get_solver_result(self) -> CheckSatResult | None:
-        return self.check_result
+    def has_solution(self) -> bool | None:
+        return self.check_result == sat if self.is_solved else None
 
 
 class CrewGame(CrewGameBase):
@@ -345,10 +333,7 @@ class CrewGame(CrewGameBase):
         if last_task:
             self.add_task_constraint_absolute_order_last(last_task.card)
 
-        print_initial_game_state(self.initial_state)
-
-    def add_card_task(self, tasked_player: int, card: Card = None,
-                      print_task: bool = True) -> None:
+    def add_card_task(self, tasked_player: int, card: Card = None) -> None:
         if card:
             assert self._valid_card(card)
             assert card not in self.tasks
@@ -377,14 +362,11 @@ class CrewGame(CrewGameBase):
                                         for c in self.cards[j]]),
                                     And(self.trick_winners[j] == tasked_player,
                                         new_task[3] == j)))
-        if print_task:
-            pass
 
     # parameter ordered_task: a tuple of task cards in the order, in which 
     # they have to be fulfilled has no influence on the other task cards. 
-    def add_task_constraint_relative_order(
-            self, ordered_tasks: list[Card],
-            print_task: bool = True) -> None:
+    def add_task_constraint_relative_order(self,
+                                           ordered_tasks: list[Card]) -> None:
         assert 1 < len(ordered_tasks) <= len(self.tasks)
         assert all([self._valid_card(card) for card in ordered_tasks])
 
@@ -396,40 +378,31 @@ class CrewGame(CrewGameBase):
             # which it is fulfilled
             self.solver.add(
                 self.tasks[task_index][3] <= self.tasks[next_task_index][3])
-            if print_task:
-                pass
 
     # parameter ordered_task: a tuple of task cards in the order, in which 
     # they have to be fulfilled all other tasks have to be fulfilled after 
     # all tasks with an absolute order are finished 
-    def add_task_constraint_absolute_order(
-            self, ordered_tasks: list[Card],
-            print_task: bool = True) -> None:
+    def add_task_constraint_absolute_order(self,
+                                           ordered_tasks: list[Card]) -> None:
         assert 1 <= len(ordered_tasks) <= len(self.tasks)
         assert all([self._valid_card(card) for card in ordered_tasks])
 
         # Absolute order is specified as a set of relative order constraints.
         if len(ordered_tasks) > 1:
-            self.add_task_constraint_relative_order(ordered_tasks, False)
+            self.add_task_constraint_relative_order(ordered_tasks)
         for i, o_task in enumerate(ordered_tasks):
             for u_task in [u_t for u_t in self.task_cards
                            if u_t not in ordered_tasks]:
-                self.add_task_constraint_relative_order([o_task, u_task], False)
-            if print_task:
-                pass
+                self.add_task_constraint_relative_order([o_task, u_task])
 
-    def add_task_constraint_absolute_order_last(
-            self, task: Card, print_task: bool = True) -> None:
+    def add_task_constraint_absolute_order_last(self, task: Card) -> None:
         assert self._valid_card(task)
 
         # Absolute order is specified as a set of relative order constraints.
         for u_task in [u_t for u_t in self.task_cards if u_t != task]:
-            self.add_task_constraint_relative_order([u_task, task], False)
-        if print_task:
-            pass
+            self.add_task_constraint_relative_order([u_task, task])
 
-    def add_special_task_no_tricks_value(
-            self, forbidden_value: int, print_task: bool = True) -> None:
+    def add_special_task_no_tricks_value(self, forbidden_value: int) -> None:
         assert 0 < forbidden_value <= self.CARD_MAX_VALUE
 
         # No trick may be won with a card of the given value.
@@ -438,15 +411,13 @@ class CrewGame(CrewGameBase):
                 self.solver.add(
                     Implies(self.cards[j][i][1] == forbidden_value,
                             self.cards[j][i][0] != self.active_colours[j]))
-        if print_task:
-            pass
 
     def get_solution(self) -> CrewGameSolution | None:
 
-        if not self.get_solver_result():
+        if not self.is_solved:
             return None
 
-        if self.get_solver_result() != sat:
+        if not self.has_solution():
             raise ValueError
 
         tricks: list[CrewGameTrick] = []
@@ -460,86 +431,7 @@ class CrewGame(CrewGameBase):
             for i in range(self.NUMBER_OF_PLAYERS):
                 colour = m.evaluate(self.cards[j][i][0]).as_long()
                 value = m.evaluate(self.cards[j][i][1]).as_long()
-                cards.append(Card(colour, value))
+                cards.append((colour, value))
             tricks.append(CrewGameTrick(cards, ac, sp, wp))
 
         return CrewGameSolution(self.initial_state, tricks)
-
-    def print_solution(self) -> None:
-
-        if not self.check_result:
-            print('The game has not been solved yet.')
-            return
-
-        if self.check_result != sat:
-            print('No solution exists.')
-            return
-
-        m = self.solver.model()
-        table_lines = []
-
-        for j in range(self.NUMBER_OF_TRICKS):
-            sp = m.evaluate(self.starting_players[j]).as_long()
-            ac = m.evaluate(self.active_colours[j]).as_long()
-            table_line = [
-                f'{j + 1}',
-                f'{self.table_elements["player_prefix"]}{sp}',
-                self.COLOUR_NAMES[ac]]
-            for i in range(self.NUMBER_OF_PLAYERS):
-                colour = m.evaluate(self.cards[j][i][0]).as_long()
-                value = m.evaluate(self.cards[j][i][1]).as_long()
-                start_mark = self.table_elements['trick_start_marker'] \
-                    if (self.table_formatting_rules['mark_trick_start']
-                        and i + 1 == sp) else ''
-                task_mark = self.table_elements['task_completion_marker'] \
-                    if (colour, value) in self.task_cards else ''
-                tm_width = self.table_element_widths["trick_start_marker"]
-                cm_width = self.table_element_widths["task_completion_marker"]
-                card_repr = \
-                    (f'{start_mark:{tm_width}} '
-                     f'{self._card_string((colour, value))} '
-                     f'{task_mark:{cm_width}}')
-                table_line.append(card_repr)
-            w = (f'{self.table_elements["player_prefix"]}'
-                 f'{m.evaluate(self.trick_winners[j]).as_long()}')
-            table_line.append(w)
-            t = self.table_elements['task_completion_marker'] \
-                if j in [m.evaluate(x[3]).as_long() for x in self.tasks] \
-                else ' ' * self.table_element_widths['task_completion_marker']
-            table_line.append(t)
-            table_lines.append(table_line)
-
-        headers = \
-            [self.table_column_headers['trick_number']] + \
-            [self.table_column_headers['starting_player']] + \
-            [self.table_column_headers['active_colour']] + \
-            [f'{self.table_elements["player_prefix"]}{i}'
-             for i in range(1, self.NUMBER_OF_PLAYERS + 1)] + \
-            [self.table_column_headers['winning_player']] + \
-            [self.table_column_headers['task_completion']]
-        widths = \
-            [self.table_content_widths['trick_number']] + \
-            [self.table_content_widths['starting_player']] + \
-            [self.table_content_widths['active_colour']] + \
-            [self.table_content_widths['content']] * self.NUMBER_OF_PLAYERS + \
-            [self.table_content_widths['winning_player']] + \
-            [self.table_content_widths['task_completion']]
-
-        print_table(headers, table_lines, widths, ' | ')
-
-
-def print_table(headers: list[str], lines: list[list[str]],
-                content_widths: list[int], column_separator: str) -> None:
-    assert len(headers) == len(content_widths)
-    assert all([len(line) == len(headers) for line in lines])
-
-    column_widths = list(map(max, zip(map(len, headers), content_widths)))
-    total_width = sum(column_widths, (len(headers) - 1) * len(column_separator))
-
-    print()
-    print(column_separator.join([f'{header:^{column_widths[i]}}'
-                                 for i, header in enumerate(headers)]))
-    print('-' * total_width)
-    for line in lines:
-        print(column_separator.join([f'{element:^{column_widths[i]}}'
-                                     for i, element in enumerate(line)]))

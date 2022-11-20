@@ -1,6 +1,6 @@
 from crew_tasks import Task, SpecialTask
-from crew_types import CardDistribution, Card
-from crew_utils import CrewGameState
+from crew_types import CardDistribution, Card, Colour, Player
+from crew_utils import CrewGameSolution, CrewGameState
 
 COLOUR_NAMES = ('R', 'G', 'B', 'Y', 'P', 'N', 'X')
 
@@ -18,6 +18,15 @@ table_formatting_rules: dict[str, bool] = {
     'mark_task_completion': True,
 }
 
+# Table column headers.
+table_column_headers: dict[str, str] = {
+    'trick_number': 'Trick',
+    'starting_player': 'Starting',
+    'active_colour': 'A',
+    'winning_player': 'Winner',
+    'task_completion': 'T',
+}
+
 # Widths of table elements.
 table_element_widths: dict[str, int] = {
     'colour_name': max(map(len, COLOUR_NAMES)),
@@ -28,6 +37,22 @@ table_element_widths: dict[str, int] = {
     'task_completion_marker':
         len(table_elements['task_completion_marker'])
         if table_formatting_rules['mark_task_completion'] else 0,
+}
+
+# Width of the contents of the different table columns.
+table_content_widths: dict[str, int] = {
+    'starting_player': len(table_elements['player_prefix']) + 1,
+    'active_colour': table_element_widths['colour_name'],
+    'content':
+        ((table_element_widths['trick_start_marker'] + 1)
+         if table_formatting_rules['mark_trick_start'] else 0) +
+        1 + table_element_widths['colour_name'] + 1 +
+        table_element_widths['card_value'] + 1 +
+        ((1 + table_element_widths['task_completion_marker'])
+         if table_formatting_rules['mark_task_completion'] else 0),
+    'winning_player': len(table_elements['player_prefix']) + 1,
+    'task_completion':
+        len(table_elements['task_completion_marker']),
 }
 
 
@@ -90,3 +115,73 @@ def print_initial_game_state(game_state: CrewGameState):
     print_card_distribution(game_state.hands)
     print('\nTasks:')
     print_tasks(game_state.tasks)
+
+
+def print_table(headers: list[str], lines: list[list[str]],
+                content_widths: list[int], column_separator: str) -> None:
+    assert len(headers) == len(content_widths)
+    assert all([len(line) == len(headers) for line in lines])
+
+    column_widths: list[int] = \
+        list(map(max, zip(map(len, headers), content_widths)))
+    total_width: int = \
+        sum(column_widths, (len(headers) - 1) * len(column_separator))
+
+    print()
+    print(column_separator.join([f'{header:^{column_widths[i]}}'
+                                 for i, header in enumerate(headers)]))
+    print('-' * total_width)
+    for line in lines:
+        print(column_separator.join([f'{element:^{column_widths[i]}}'
+                                     for i, element in enumerate(line)]))
+
+
+def print_solution(solution: CrewGameSolution):
+    task_cards: list[Card] = \
+        [t.card for t in solution.initial_state.tasks if type(t) == Task]
+    table_lines: list[list[str]] = []
+    for j, trick in enumerate(solution.tricks):
+        task_completed: bool = False
+        ac: Colour = trick.active_colour
+        sp: Player = trick.active_player
+        wp: Player = trick.winning_player
+        table_line: list[str] = [
+            f'{j + 1}',
+            f'{table_elements["player_prefix"]}{sp}',
+            COLOUR_NAMES[ac]]
+        for i, card in enumerate(trick.played_cards):
+            start_mark, task_mark = '', ''
+            if table_formatting_rules['mark_trick_start'] and i + 1 == sp:
+                start_mark = table_elements['trick_start_marker']
+            if card in task_cards:
+                task_mark = table_elements['task_completion_marker']
+                task_completed = True
+            tm_width = table_element_widths["trick_start_marker"]
+            cm_width = table_element_widths["task_completion_marker"]
+            table_line.append(f'{start_mark:{tm_width}} '
+                              f'{card_string(card)} '
+                              f'{task_mark:{cm_width}}')
+        table_line.append(f'{table_elements["player_prefix"]}{wp}')
+        t = table_elements['task_completion_marker'] if task_completed \
+            else ' ' * table_element_widths['task_completion_marker']
+        table_line.append(t)
+        table_lines.append(table_line)
+
+    number_of_players = len(solution.tricks[0].played_cards)
+    headers = \
+        [table_column_headers['trick_number']] + \
+        [table_column_headers['starting_player']] + \
+        [table_column_headers['active_colour']] + \
+        [f'{table_elements["player_prefix"]}{i}'
+         for i in range(1, number_of_players + 1)] + \
+        [table_column_headers['winning_player']] + \
+        [table_column_headers['task_completion']]
+    widths = \
+        [len(str(len(solution.tricks)))] + \
+        [table_content_widths['starting_player']] + \
+        [table_content_widths['active_colour']] + \
+        [table_content_widths['content']] * number_of_players + \
+        [table_content_widths['winning_player']] + \
+        [table_content_widths['task_completion']]
+
+    print_table(headers, table_lines, widths, ' | ')
