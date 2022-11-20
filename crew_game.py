@@ -4,6 +4,7 @@ import time
 from z3 import And, Distinct, Implies, Int, IntVector, Or, sat, Solver, \
     CheckSatResult
 
+from crew_print import print_initial_game_state
 from crew_types import Card, Player, CardDistribution
 from crew_utils import deal_cards, CrewGameState, CrewGameSolution, \
     CrewGameTrick
@@ -94,8 +95,6 @@ class CrewGameBase(object):
 
         self._init_table_setup()
 
-        self._print_card_distribution()
-
         self._init_solver_setup()
         self._init_tasks_setup()
 
@@ -156,13 +155,6 @@ class CrewGameBase(object):
             'task_completion':
                 len(self.table_elements['task_completion_marker']),
         }
-
-    def _print_card_distribution(self):
-        print('\nCard distribution:')
-        for i, cs in enumerate(self.player_hands):
-            print(f'{self.table_elements["player_prefix"]}'
-                  f'{i + 1}:', end=' ')
-            print(', '.join([self._card_string(c) for c in cs]))
 
     def _init_solver_setup(self):
         # A card is represented by two integers.
@@ -353,6 +345,8 @@ class CrewGame(CrewGameBase):
         if last_task:
             self.add_task_constraint_absolute_order_last(last_task.card)
 
+        print_initial_game_state(self.initial_state)
+
     def add_card_task(self, tasked_player: int, card: Card = None,
                       print_task: bool = True) -> None:
         if card:
@@ -384,8 +378,7 @@ class CrewGame(CrewGameBase):
                                     And(self.trick_winners[j] == tasked_player,
                                         new_task[3] == j)))
         if print_task:
-            print(f'Task for {self.table_elements["player_prefix"]}'
-                  f'{tasked_player}: {self._card_string(card)}')
+            pass
 
     # parameter ordered_task: a tuple of task cards in the order, in which 
     # they have to be fulfilled has no influence on the other task cards. 
@@ -404,9 +397,7 @@ class CrewGame(CrewGameBase):
             self.solver.add(
                 self.tasks[task_index][3] <= self.tasks[next_task_index][3])
             if print_task:
-                print('Task order constraint (relative): '
-                      f'{self._card_string(o_task)} must be completed before '
-                      f'{self._card_string(next_task)}.')
+                pass
 
     # parameter ordered_task: a tuple of task cards in the order, in which 
     # they have to be fulfilled all other tasks have to be fulfilled after 
@@ -425,9 +416,7 @@ class CrewGame(CrewGameBase):
                            if u_t not in ordered_tasks]:
                 self.add_task_constraint_relative_order([o_task, u_task], False)
             if print_task:
-                print('Task order constraint (absolute): '
-                      f'{self._card_string(o_task)} must be number {i + 1} '
-                      f'in the order of all {len(self.tasks)} completed tasks.')
+                pass
 
     def add_task_constraint_absolute_order_last(
             self, task: Card, print_task: bool = True) -> None:
@@ -437,9 +426,7 @@ class CrewGame(CrewGameBase):
         for u_task in [u_t for u_t in self.task_cards if u_t != task]:
             self.add_task_constraint_relative_order([u_task, task], False)
         if print_task:
-            print('Task order constraint (absolute): '
-                  f'{self._card_string(task)} '
-                  f'must be the last task to be completed.')
+            pass
 
     def add_special_task_no_tricks_value(
             self, forbidden_value: int, print_task: bool = True) -> None:
@@ -452,8 +439,7 @@ class CrewGame(CrewGameBase):
                     Implies(self.cards[j][i][1] == forbidden_value,
                             self.cards[j][i][0] != self.active_colours[j]))
         if print_task:
-            print('Special task: No tricks may be won '
-                  f'with cards of value {forbidden_value}.')
+            pass
 
     def get_solution(self) -> CrewGameSolution | None:
 

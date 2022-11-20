@@ -4,9 +4,9 @@ from typing import TypeAlias
 # the second determines the card value.
 Card: TypeAlias = tuple[int, int]
 
-Hand: TypeAlias = list[Card]
+Hand: TypeAlias = tuple[Card]
 
-CardDistribution: TypeAlias = list[Hand]
+CardDistribution: TypeAlias = tuple[Hand]
 
 # Players are represented by integers, starting with 1.
 Player: TypeAlias = int

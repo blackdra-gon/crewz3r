@@ -1,15 +1,12 @@
 from crew_types import Card
 
 
-class TaskBase(object):
-    pass
+class Task:
+    """Class representing a task assigned to a player.
 
-
-# Class representing a task assigned to a player
-# If order_constraint == 0, there is no order constraint.
-# If relative_constraint == False, we have an absolute order constraint.
-# In this case -1 means: The task has to be fulfilled at last.
-class Task(TaskBase):
+    If order_constraint == 0, there is no order constraint.
+    If relative_constraint == False, we have an absolute order constraint.
+    In this case -1 means: The task has to be completed last."""
 
     def __init__(self, card: Card, player: int, order_constraint=0,
                  relative_constraint: bool = False):
@@ -23,11 +20,15 @@ class Task(TaskBase):
         self.relative_constraint: bool = relative_constraint
 
 
-class SpecialTask(TaskBase):
-    pass
+class SpecialTask:
+
+    def __init__(self, description: str):
+        self.description = description
 
 
 class NoTricksWithValueTask(SpecialTask):
 
     def __init__(self, forbidden_value):
+        super().__init__(f'No tricks may be won with cards of value '
+                         f'{forbidden_value}.')
         self.forbidden_value = forbidden_value
