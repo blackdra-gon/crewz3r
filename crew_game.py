@@ -286,6 +286,30 @@ class CrewGameBase(object):
     def has_solution(self) -> bool | None:
         return self.check_result == sat if self.is_solved else None
 
+    def get_solution(self) -> CrewGameSolution | None:
+
+        if not self.is_solved:
+            return None
+
+        if not self.has_solution():
+            raise ValueError
+
+        tricks: list[CrewGameTrick] = []
+
+        m = self.solver.model()
+        for j in range(self.NUMBER_OF_TRICKS):
+            ac = m.evaluate(self.active_colours[j]).as_long()
+            sp = m.evaluate(self.starting_players[j]).as_long()
+            wp = m.evaluate(self.trick_winners[j]).as_long()
+            cards = []
+            for i in range(self.NUMBER_OF_PLAYERS):
+                colour = m.evaluate(self.cards[j][i][0]).as_long()
+                value = m.evaluate(self.cards[j][i][1]).as_long()
+                cards.append((colour, value))
+            tricks.append(CrewGameTrick(cards, ac, sp, wp))
+
+        return CrewGameSolution(self.initial_state, tricks)
+
 
 class CrewGame(CrewGameBase):
 
@@ -411,27 +435,3 @@ class CrewGame(CrewGameBase):
                 self.solver.add(
                     Implies(self.cards[j][i][1] == forbidden_value,
                             self.cards[j][i][0] != self.active_colours[j]))
-
-    def get_solution(self) -> CrewGameSolution | None:
-
-        if not self.is_solved:
-            return None
-
-        if not self.has_solution():
-            raise ValueError
-
-        tricks: list[CrewGameTrick] = []
-
-        m = self.solver.model()
-        for j in range(self.NUMBER_OF_TRICKS):
-            ac = m.evaluate(self.active_colours[j]).as_long()
-            sp = m.evaluate(self.starting_players[j]).as_long()
-            wp = m.evaluate(self.trick_winners[j]).as_long()
-            cards = []
-            for i in range(self.NUMBER_OF_PLAYERS):
-                colour = m.evaluate(self.cards[j][i][0]).as_long()
-                value = m.evaluate(self.cards[j][i][1]).as_long()
-                cards.append((colour, value))
-            tricks.append(CrewGameTrick(cards, ac, sp, wp))
-
-        return CrewGameSolution(self.initial_state, tricks)
