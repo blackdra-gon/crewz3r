@@ -1,13 +1,11 @@
 import time
 
-from crew_example_games import example_game
+from crew_example_games import example_game, random_game
+from crew_game import CrewGame
 from crew_print import print_solution, print_initial_game_state
 
 
-def main():
-    game = example_game(4)
-    # game = random_game()
-
+def run_game(game: CrewGame):
     print_initial_game_state(game.initial_state)
 
     start_time = time.time()
@@ -21,6 +19,11 @@ def main():
         print_solution(game.get_solution())
     else:
         print('No solution exists.')
+
+
+def main():
+    run_game(example_game(4))
+    # run_game(random_game())
 
 
 if __name__ == '__main__':
