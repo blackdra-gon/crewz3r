@@ -91,68 +91,8 @@ class CrewGameBase(object):
             self.NUMBER_OF_TRICKS = len(cards_distribution[0])
             self.player_hands: CardDistribution = cards_distribution
 
-        self._init_table_setup()
-
         self._init_solver_setup()
         self._init_tasks_setup()
-
-    def _init_table_setup(self):
-        # Parameters determining the formatting of table output.
-        self.table_elements: dict[str, str] = {
-            'column_separator': ' | ',
-            'player_prefix': 'Player ',
-            'trick_start_marker': '>',
-            'task_completion_marker': '*',
-        }
-
-        # Rules for the formatting of table output.
-        self.table_formatting_rules: dict[str, bool] = {
-            'mark_trick_start': True,
-            'mark_task_completion': True,
-        }
-
-        # Table column headers.
-        self.table_column_headers: dict[str, str] = {
-            'trick_number': 'Trick',
-            'starting_player': 'Starting',
-            'active_colour': 'A',
-            'winning_player': 'Winner',
-            'task_completion': 'T',
-        }
-
-        # Widths of table elements.
-        self.table_element_widths: dict[str, int] = {
-            'colour_name': max(map(len,
-                                   self.COLOUR_NAMES[:self.NUMBER_OF_PLAYERS] +
-                                   (self.COLOUR_NAMES[1],)
-                                   if self.rules['use_trump_cards'] else ())),
-            'card_value': len(str(self.CARD_MAX_VALUE)),
-            'trick_start_marker':
-                len(self.table_elements['trick_start_marker'])
-                if self.table_formatting_rules['mark_trick_start'] else 0,
-            'task_completion_marker':
-                len(self.table_elements['task_completion_marker'])
-                if self.table_formatting_rules['mark_task_completion'] else 0,
-        }
-
-        # Width of the contents of the different table columns.
-        self.table_content_widths: dict[str, int] = {
-            'trick_number': len(str(self.NUMBER_OF_TRICKS)),
-            'starting_player': len(self.table_elements['player_prefix'] +
-                                   str(self.NUMBER_OF_PLAYERS)),
-            'active_colour': self.table_element_widths['colour_name'],
-            'content':
-                ((self.table_element_widths['trick_start_marker'] + 1)
-                 if self.table_formatting_rules['mark_trick_start'] else 0) +
-                1 + self.table_element_widths['colour_name'] + 1 +
-                self.table_element_widths['card_value'] + 1 +
-                ((1 + self.table_element_widths['task_completion_marker'])
-                 if self.table_formatting_rules['mark_task_completion'] else 0),
-            'winning_player': len(self.table_elements['player_prefix'] +
-                                  str(self.NUMBER_OF_PLAYERS)),
-            'task_completion':
-                len(self.table_elements['task_completion_marker']),
-        }
 
     def _init_solver_setup(self):
         # A card is represented by two integers.
