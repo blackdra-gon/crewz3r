@@ -10,11 +10,14 @@ from crew_utils import deal_cards, CrewGameState, CrewGameSolution, \
 
 class CrewGameBase(object):
 
-    def __init__(self, number_of_players: int, number_of_colours: int,
+    def __init__(self, initial_state: CrewGameState,
+                 number_of_players: int, number_of_colours: int,
                  card_max_value: int, use_trump_cards: bool,
                  trump_card_max_value: int,
                  cards_distribution: CardDistribution = None,
                  first_starting_player: Player | None = None) -> None:
+
+        self.initial_state = initial_state
 
         assert number_of_players >= 2
         assert number_of_colours >= 1
@@ -257,8 +260,6 @@ class CrewGame(CrewGameBase):
                  cards_distribution: CardDistribution = None,
                  first_starting_player: int = None) -> None:
 
-        self.initial_state = initial_state
-
         number_of_players: int = len(initial_state.hands)
         assert number_of_players in (3, 4, 5)
         number_of_colours: int = 4
@@ -269,7 +270,7 @@ class CrewGame(CrewGameBase):
         card_max_value: int = 9
         use_trump_cards: bool = True
 
-        super().__init__(number_of_players, number_of_colours,
+        super().__init__(initial_state, number_of_players, number_of_colours,
                          card_max_value, use_trump_cards, trump_card_max_value,
                          cards_distribution, first_starting_player)
 
