@@ -69,11 +69,6 @@ def print_card_distribution(cards: CardDistribution):
         print(', '.join([card_string(c) for c in cs]))
 
 
-def print_tasks(tasks: list[Task | SpecialTask]):
-    print_regular_tasks([t for t in tasks if type(t) == Task])
-    print_special_tasks([t for t in tasks if type(t) == SpecialTask])
-
-
 def print_regular_tasks(tasks: list[Task]):
     ordered_tasks = []
     last_task = None
@@ -114,7 +109,8 @@ def print_initial_game_state(game_state: CrewGameState):
     print('\nCard distribution:')
     print_card_distribution(game_state.hands)
     print('\nTasks:')
-    print_tasks(game_state.tasks)
+    print_regular_tasks(game_state.tasks)
+    print_special_tasks(game_state.special_tasks)
 
 
 def print_table(headers: list[str], lines: list[list[str]],
