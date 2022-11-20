@@ -143,7 +143,7 @@ def print_solution(solution: CrewGameSolution):
     for j, trick in enumerate(solution.tricks):
         task_completed: bool = False
         ac: Colour = trick.active_colour
-        sp: Player = trick.active_player
+        sp: Player = trick.starting_player
         wp: Player = trick.winning_player
         table_line: list[str] = [
             f'{j + 1}',

@@ -29,25 +29,39 @@ def deal_cards(number_of_players: int,
     return tuple(hands)
 
 
-# If the first starting player shall be determined by the highest trump card,
-# active_player should be set to None
+@dataclass
+class CrewGameParameters:
+    """The base parameters needed to initialize a crew game."""
+    number_of_players: int
+    number_of_colours: int
+    card_max_value: int
+    trump_max_value: int
+
+
 @dataclass
 class CrewGameState:
-    hands: CardDistribution
-    tasks: list[Task | SpecialTask]
-    active_player: Player | None = None
+    """The card distribution, tasks and active player of a crew game.
+
+    If the first starting player shall be determined by the highest trump card,
+    active_player should be set to None."""
+    hands: CardDistribution | None
+    tasks: list[Task]
     special_tasks: list[SpecialTask] = field(default_factory=list)
+    active_player: Player | None = None
 
 
 @dataclass
 class CrewGameTrick:
+    """A single trick within a game."""
     played_cards: list[Card]
     active_colour: Colour
-    active_player: Player
+    starting_player: Player
     winning_player: Player
 
 
 @dataclass
 class CrewGameSolution:
+    """A sequence of tricks that fulfill all tasks and requirements of a game
+    instance."""
     initial_state: CrewGameState
     tricks: list[CrewGameTrick]

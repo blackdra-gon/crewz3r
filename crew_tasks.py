@@ -2,7 +2,7 @@ from crew_types import Card
 
 
 class Task:
-    """Class representing a task assigned to a player.
+    """A task for a specific card assigned to a player.
 
     If order_constraint == 0, there is no order constraint.
     If relative_constraint == False, we have an absolute order constraint.
@@ -21,13 +21,12 @@ class Task:
 
 
 class SpecialTask:
-
+    """Base class for all non-standard tasks."""
     def __init__(self, description: str):
         self.description = description
 
 
 class NoTricksWithValueTask(SpecialTask):
-
     def __init__(self, forbidden_value):
         super().__init__(f'No tricks may be won with cards of value '
                          f'{forbidden_value}.')
