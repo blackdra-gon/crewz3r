@@ -22,7 +22,10 @@ def run_game(game: CrewGame):
 
 
 def main():
-    run_game(example_game(4))
+    # run_game(example_game(1))
+    # run_game(example_game(2))
+    run_game(example_game(3))
+    # run_game(example_game(4))
     # run_game(random_game())
 
 

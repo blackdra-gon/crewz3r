@@ -130,6 +130,7 @@ def print_table(headers: list[str], lines: list[list[str]],
     for line in lines:
         print(column_separator.join([f'{element:^{column_widths[i]}}'
                                      for i, element in enumerate(line)]))
+    print()
 
 
 def print_solution(solution: CrewGameSolution):
