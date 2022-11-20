@@ -4,8 +4,8 @@ from z3 import And, Distinct, Implies, Int, IntVector, Or, sat, Solver, \
     CheckSatResult
 
 from crew_types import Card, CardDistribution
-from crew_utils import deal_cards, CrewGameState, CrewGameSolution, \
-    CrewGameTrick, CrewGameParameters
+from crew_utils import deal_cards, CrewGameParameters, CrewGameState, \
+    CrewGameSolution, CrewGameTrick, DEFAULT_PARAMETERS
 
 
 class CrewGameBase(object):
@@ -221,25 +221,19 @@ class CrewGameBase(object):
 
 class CrewGame(CrewGameBase):
 
-    def __init__(self, initial_state: CrewGameState,
-                 cards_distribution: CardDistribution = None,
-                 first_starting_player: int = None) -> None:
+    def __init__(self, parameters=DEFAULT_PARAMETERS,
+                 initial_state: CrewGameState = CrewGameState()) -> None:
 
-        number_of_players: int = len(initial_state.hands)
-        assert number_of_players in (3, 4, 5)
-        number_of_colours: int = 4
-        trump_card_max_value: int = 4
-        if number_of_players == 3:
-            number_of_colours = 3
-            trump_card_max_value = 3
-        card_max_value: int = 9
-        use_trump_cards: bool = True
+        assert parameters.number_of_players in (3, 4, 5)
+        assert parameters.max_card_value == 9
+        if parameters.number_of_players == 3:
+            assert parameters.number_of_colours == 3
+            assert parameters.max_trump_value == 3
+        else:
+            assert parameters.number_of_colours == 4
+            assert parameters.max_trump_value == 4
 
-        super().__init__(
-            CrewGameParameters(number_of_players, number_of_colours,
-                               card_max_value, trump_card_max_value),
-            initial_state
-        )
+        super().__init__(parameters, initial_state)
 
         # This function assumes that a standard crew card deck with 4*9+4 cards
         # is used for 4 and 5 players and 3*9+3 cards are used for 3 players.
