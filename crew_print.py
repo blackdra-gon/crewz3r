@@ -1,6 +1,6 @@
 from crew_tasks import Task, SpecialTask
 from crew_types import CardDistribution, Card, Colour, Player
-from crew_utils import CrewGameSolution, CrewGameState
+from crew_utils import CrewGameSolution, CrewGameState, CrewGameParameters
 
 COLOUR_NAMES = ('R', 'G', 'B', 'Y', 'P', 'N', 'X')
 
@@ -62,6 +62,15 @@ def card_string(card: Card):
             f'{card[1]:>{table_element_widths["card_value"]}})')
 
 
+def print_game_parameters(parameters: CrewGameParameters):
+    p = (f'{parameters.number_of_players} players, '
+         f'{parameters.number_of_colours} colours '
+         f'with maximum value of {parameters.max_card_value}, ')
+    p += f'trump cards with maximum value of {parameters.max_trump_value}.' \
+        if parameters.max_trump_value else 'no trump cards.'
+    print(p)
+
+
 def print_card_distribution(cards: CardDistribution):
     for i, cs in enumerate(cards):
         print(f'{table_elements["player_prefix"]}'
@@ -105,7 +114,10 @@ def print_special_tasks(tasks: list[SpecialTask]):
         print(f'Special task: {task.description}')
 
 
-def print_initial_game_state(game_state: CrewGameState):
+def print_initial_game_state(parameters: CrewGameParameters,
+                             game_state: CrewGameState):
+    print('\nGame parameters:')
+    print_game_parameters(parameters)
     print('\nCard distribution:')
     print_card_distribution(game_state.hands)
     print('\nTasks:')

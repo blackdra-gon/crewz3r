@@ -6,13 +6,13 @@ from crew_print import print_solution, print_initial_game_state
 
 
 def run_game(game: CrewGame):
-    print_initial_game_state(game.initial_state)
+    print_initial_game_state(game.parameters, game.initial_state)
 
-    start_time = time.time()
+    start_time: float = time.time()
 
     game.solve()
 
-    duration = time.time() - start_time
+    duration: float = time.time() - start_time
     print(f'\nSolving took {int(duration // 60)}m {duration % 60:.1f}s.')
 
     if game.has_solution():
