@@ -181,8 +181,11 @@ class CrewGameBase(object):
         self.tasks: list[IntVector] = []
 
     def _valid_card(self, card: Card) -> bool:
-        return 0 <= card[0] < self.parameters.number_of_colours and \
-               0 < card[1] <= self.parameters.max_card_value
+        if card[0] == self.TRUMP_COLOUR:
+            return 0 < card[1] <= self.parameters.max_trump_value
+        if 0 <= card[0] < self.parameters.number_of_colours:
+            return 0 < card[1] <= self.parameters.max_card_value
+        return False
 
     def solve(self) -> None:
         self.check_result = self.solver.check()
@@ -264,7 +267,8 @@ class CrewGame(CrewGameBase):
 
     def add_card_task(self, tasked_player: int, card: Card = None) -> None:
         if card:
-            assert self._valid_card(card)
+            assert self._valid_card(card), \
+                f'Invalid card: ({card[0]}, {card[1]}).'
             assert card not in self.tasks
         else:
             card = random.choice([c for hand in self.player_hands for c in hand
