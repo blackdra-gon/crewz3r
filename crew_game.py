@@ -3,52 +3,36 @@ import random
 from z3 import And, Distinct, Implies, Int, IntVector, Or, sat, Solver, \
     CheckSatResult
 
-from crew_types import Card, Player, CardDistribution
+from crew_types import Card, CardDistribution
 from crew_utils import deal_cards, CrewGameState, CrewGameSolution, \
-    CrewGameTrick
+    CrewGameTrick, CrewGameParameters
 
 
 class CrewGameBase(object):
 
-    def __init__(self, initial_state: CrewGameState,
-                 number_of_players: int, number_of_colours: int,
-                 card_max_value: int, use_trump_cards: bool,
-                 trump_card_max_value: int,
-                 cards_distribution: CardDistribution = None,
-                 first_starting_player: Player | None = None) -> None:
+    def __init__(self, parameters: CrewGameParameters,
+                 initial_state: CrewGameState) -> None:
 
+        assert parameters.number_of_players >= 2
+        assert parameters.number_of_colours >= 1
+        assert parameters.max_card_value >= 1
+        assert parameters.max_trump_value >= 0
+
+        self.parameters = parameters
         self.initial_state = initial_state
-
-        assert number_of_players >= 2
-        assert number_of_colours >= 1
-        assert card_max_value >= 1
-
-        # The number of players for which to solve the game.
-        self.NUMBER_OF_PLAYERS: int = number_of_players
-
-        # The number of different colours. Trump cards (if active) are not
-        # counted.
-        self.NUMBER_OF_COLOURS: int = number_of_colours
-
-        # Cards of each colour will be created ranging from 1 to this value,
-        # inclusive.
-        self.CARD_MAX_VALUE: int = card_max_value
-
-        # Trump cards will be created ranging from 1 to this value, inclusive.
-        self.TRUMP_CARD_MAX_VALUE: int = trump_card_max_value
 
         # Internal constant representing the colour of trump cards.
         self.TRUMP_COLOUR = -1
 
         # Rules for the game and the game setup.
         self.rules: dict[str, bool] = {
-            'use_trump_cards': use_trump_cards,
+            'use_trump_cards': parameters.max_trump_value != 0,
             'highest_trump_starts_first_trick': True,
         }
+
         # When the first starting player is given
-        if first_starting_player:
+        if initial_state.active_player:
             self.rules['highest_trump_starts_first_trick'] = False
-            self.first_starting_player = first_starting_player
 
         # If the solver has been run.
         self.is_solved: bool = False
@@ -56,43 +40,21 @@ class CrewGameBase(object):
         # The solver result.
         self.check_result: CheckSatResult | None = None
 
-        # Text representation of colours.
-        # Last name reserved for trump cards.
-        self.COLOUR_NAMES = ('R', 'G', 'B', 'Y', 'P', 'N', 'X')
-        assert self.NUMBER_OF_COLOURS < len(self.COLOUR_NAMES)
+        self.player_hands: CardDistribution = initial_state.hands
+        if not self.player_hands:
+            self.player_hands = deal_cards(parameters)
 
-        # The total number of cards in the game.
-        if not cards_distribution:
-            # For a random game:
-            self.NUMBER_OF_CARDS = self.NUMBER_OF_COLOURS * self.CARD_MAX_VALUE
-            self.NUMBER_OF_CARDS += \
-                trump_card_max_value if use_trump_cards else 0
-            # The number of cards must be a multiple of the number of players
-            # so that the cards can be distributed evenly.
-            assert self.NUMBER_OF_CARDS % number_of_players == 0, \
-                (f'The number of {self.NUMBER_OF_CARDS} cards can\'t be '
-                 f'evenly distributed between {number_of_players} players.')
+        # The number of hands must match the number of players.
+        assert len(self.player_hands) == parameters.number_of_players
 
-            # The number of tricks that will be played in the game.
-            self.NUMBER_OF_TRICKS = \
-                self.NUMBER_OF_CARDS // self.NUMBER_OF_PLAYERS
+        self.NUMBER_OF_TRICKS = len(self.player_hands[0])
 
-            # Stores the distribution of cards between the players.
-            self.player_hands: CardDistribution = deal_cards(
-                self.NUMBER_OF_PLAYERS, self.NUMBER_OF_COLOURS,
-                self.CARD_MAX_VALUE, self.TRUMP_CARD_MAX_VALUE)
-        else:
-            # For a given card distribution:
-            # The number of hands must match the number of players.
-            assert len(cards_distribution) == self.NUMBER_OF_PLAYERS
-            # All hands must contain the same number of cards.
-            for player_hand in cards_distribution:
-                assert len(player_hand) == len(cards_distribution[0])
-            # Each card may only occur once in the given distribution.
-            for i, card in enumerate(cards_distribution):
-                assert card not in cards_distribution[:i]
-            self.NUMBER_OF_TRICKS = len(cards_distribution[0])
-            self.player_hands: CardDistribution = cards_distribution
+        # All hands must contain the same number of cards.
+        for hand in self.player_hands:
+            assert len(hand) == self.NUMBER_OF_TRICKS
+        # Each card may only occur once in the given distribution.
+        for i, card in enumerate(self.player_hands):
+            assert card not in self.player_hands[:i]
 
         self._init_solver_setup()
         self._init_tasks_setup()
@@ -101,7 +63,7 @@ class CrewGameBase(object):
         # A card is represented by two integers.
         # The first represents the colour, the second the card value.
         self.cards = [[IntVector('card_%s_%s' % (j, i), 2)
-                       for i in range(1, self.NUMBER_OF_PLAYERS + 1)]
+                       for i in range(1, self.parameters.number_of_players + 1)]
                       for j in range(1, self.NUMBER_OF_TRICKS + 1)]
 
         # Lists of integers store the starting player, active colour and winner
@@ -116,20 +78,21 @@ class CrewGameBase(object):
         self.solver = Solver()
 
         # Each card may occur only once.
-        self.solver.add(Distinct(*[card[0] * self.CARD_MAX_VALUE + card[1]
-                                   for trick in self.cards for card in trick]))
+        self.solver.add(
+            Distinct(*[card[0] * self.parameters.max_card_value + card[1]
+                       for trick in self.cards for card in trick]))
 
         # The player with the highest trump card starts the first trick.
         if self.rules['use_trump_cards'] and \
                 self.rules['highest_trump_starts_first_trick']:
-            for i in range(self.NUMBER_OF_PLAYERS):
+            for i in range(self.parameters.number_of_players):
                 self.solver.add(Implies(
-                    (self.TRUMP_COLOUR, self.TRUMP_CARD_MAX_VALUE)
+                    (self.TRUMP_COLOUR, self.parameters.max_trump_value)
                     in self.player_hands[i],
                     self.starting_players[0] == i + 1))
-        elif self.first_starting_player:
+        elif self.initial_state.active_player:
             self.solver.add(
-                self.starting_players[0] == self.first_starting_player)
+                self.starting_players[0] == self.initial_state.active_player)
 
         for j in range(self.NUMBER_OF_TRICKS):
 
@@ -140,30 +103,30 @@ class CrewGameBase(object):
 
             # Only valid player indices may be used.
             s.add(0 < trick_winner)
-            s.add(trick_winner <= self.NUMBER_OF_PLAYERS)
+            s.add(trick_winner <= self.parameters.number_of_players)
             s.add(0 < starting_player)
-            s.add(starting_player <= self.NUMBER_OF_PLAYERS)
+            s.add(starting_player <= self.parameters.number_of_players)
 
             # Only valid colour indices may be used.
             s.add(0 <= active_colour)
-            s.add(active_colour < self.NUMBER_OF_COLOURS)
+            s.add(active_colour < self.parameters.number_of_colours)
 
-            for i in range(self.NUMBER_OF_PLAYERS):
+            for i in range(self.parameters.number_of_players):
 
                 colour, value = self.cards[j][i][0], self.cards[j][i][1]
                 player = i + 1
 
                 # Only valid colour indices may be used.
                 s.add(-1 <= colour)
-                s.add(colour < self.NUMBER_OF_COLOURS)
+                s.add(colour < self.parameters.number_of_colours)
 
                 # Only valid card values may be used.
                 s.add(0 < value)
-                s.add(value <= self.CARD_MAX_VALUE)
+                s.add(value <= self.parameters.max_card_value)
 
                 # Only valid trump card values may be used.
                 s.add(Implies(colour == self.TRUMP_COLOUR,
-                              value <= self.TRUMP_CARD_MAX_VALUE))
+                              value <= self.parameters.max_trump_value))
 
                 # Players may only play cards that they hold.
                 s.add(Or([And(colour == c[0], value == c[1])
@@ -188,7 +151,7 @@ class CrewGameBase(object):
                                               self.TRUMP_COLOUR,
                                               value > self.cards[j][k][1])
                                            for k in range(
-                                              self.NUMBER_OF_PLAYERS)
+                                              self.parameters.number_of_players)
                                            if i != k])),
                                   trick_winner == player))
 
@@ -197,15 +160,14 @@ class CrewGameBase(object):
                 # If the player's card is of the active colour and higher
                 # than all other cards of the active colour in the trick,
                 # that player has won the trick.
-                s.add(Implies(And(colour == active_colour,
-                                  And([And(self.cards[j][k][0] !=
-                                           self.TRUMP_COLOUR,
-                                           Or(self.cards[j][k][0] !=
-                                              active_colour,
-                                              value > self.cards[j][k][1]))
-                                       for k in range(self.NUMBER_OF_PLAYERS)
-                                       if i != k])),
-                              trick_winner == player))
+                s.add(Implies(
+                    And(colour == active_colour,
+                        And([And(self.cards[j][k][0] != self.TRUMP_COLOUR,
+                                 Or(self.cards[j][k][0] != active_colour,
+                                    value > self.cards[j][k][1]))
+                             for k in range(self.parameters.number_of_players)
+                             if i != k])),
+                    trick_winner == player))
 
                 # If a player holds a card of the active colour, that player may
                 # only play a card of that colour.
@@ -219,8 +181,8 @@ class CrewGameBase(object):
         self.tasks: list[IntVector] = []
 
     def _valid_card(self, card: Card) -> bool:
-        return 0 <= card[0] < self.NUMBER_OF_COLOURS and \
-               0 < card[1] <= self.CARD_MAX_VALUE
+        return 0 <= card[0] < self.parameters.number_of_colours and \
+               0 < card[1] <= self.parameters.max_card_value
 
     def solve(self) -> None:
         self.check_result = self.solver.check()
@@ -245,7 +207,7 @@ class CrewGameBase(object):
             sp = m.evaluate(self.starting_players[j]).as_long()
             wp = m.evaluate(self.trick_winners[j]).as_long()
             cards = []
-            for i in range(self.NUMBER_OF_PLAYERS):
+            for i in range(self.parameters.number_of_players):
                 colour = m.evaluate(self.cards[j][i][0]).as_long()
                 value = m.evaluate(self.cards[j][i][1]).as_long()
                 cards.append((colour, value))
@@ -270,9 +232,11 @@ class CrewGame(CrewGameBase):
         card_max_value: int = 9
         use_trump_cards: bool = True
 
-        super().__init__(initial_state, number_of_players, number_of_colours,
-                         card_max_value, use_trump_cards, trump_card_max_value,
-                         cards_distribution, first_starting_player)
+        super().__init__(
+            CrewGameParameters(number_of_players, number_of_colours,
+                               card_max_value, trump_card_max_value),
+            initial_state
+        )
 
         # This function assumes that a standard crew card deck with 4*9+4 cards
         # is used for 4 and 5 players and 3*9+3 cards are used for 3 players.
@@ -368,11 +332,11 @@ class CrewGame(CrewGameBase):
             self.add_task_constraint_relative_order([u_task, task])
 
     def add_special_task_no_tricks_value(self, forbidden_value: int) -> None:
-        assert 0 < forbidden_value <= self.CARD_MAX_VALUE
+        assert 0 < forbidden_value <= self.parameters.max_card_value
 
         # No trick may be won with a card of the given value.
         for j in range(self.NUMBER_OF_TRICKS):
-            for i in range(self.NUMBER_OF_PLAYERS):
+            for i in range(self.parameters.number_of_players):
                 self.solver.add(
                     Implies(self.cards[j][i][1] == forbidden_value,
                             self.cards[j][i][0] != self.active_colours[j]))

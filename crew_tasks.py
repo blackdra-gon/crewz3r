@@ -22,6 +22,7 @@ class Task:
 
 class SpecialTask:
     """Base class for all non-standard tasks."""
+
     def __init__(self, description: str):
         self.description = description
 
