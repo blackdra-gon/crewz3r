@@ -7,23 +7,31 @@ from crew_types import Card, CardDistribution, Colour, Player, Hand
 
 @dataclass
 class CrewGameParameters:
-    """The base parameters needed to initialize a crew game."""
+    """The base parameters needed to initialize a crew game.
+
+    Setting max_trump_value to 0 disables trump cards."""
     number_of_players: int
     number_of_colours: int
     max_card_value: int
     max_trump_value: int
 
 
+FOUR_PLAYER_PARAMETERS: CrewGameParameters = CrewGameParameters(4, 4, 9, 4)
+THREE_PLAYER_PARAMETERS: CrewGameParameters = CrewGameParameters(3, 3, 9, 3)
+FIVE_PLAYER_PARAMETERS: CrewGameParameters = CrewGameParameters(5, 4, 9, 4)
+DEFAULT_PARAMETERS: CrewGameParameters = FOUR_PLAYER_PARAMETERS
+
+
 @dataclass
 class CrewGameState:
     """The card distribution, tasks and active player of a crew game.
 
-    If the first starting player shall be determined by the highest trump card,
-    active_player should be set to None."""
-    hands: CardDistribution | None
-    tasks: list[Task]
-    special_tasks: list[SpecialTask] = field(default_factory=list)
+    When active_player is set to None, the first starting player is
+    determined by the highest trump card."""
+    hands: CardDistribution | None = None
     active_player: Player | None = None
+    tasks: list[Task] = field(default_factory=list)
+    special_tasks: list[SpecialTask] = field(default_factory=list)
 
 
 @dataclass

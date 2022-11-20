@@ -1,4 +1,4 @@
-from crew_types import Card
+from crew_types import Card, Player
 
 
 class Task:
@@ -8,7 +8,8 @@ class Task:
     If relative_constraint == False, we have an absolute order constraint.
     In this case -1 means: The task has to be completed last."""
 
-    def __init__(self, card: Card, player: int, order_constraint=0,
+    def __init__(self, card: Card, player: Player,
+                 order_constraint: int = 0,
                  relative_constraint: bool = False):
         if relative_constraint:
             assert order_constraint in (0, 1, 2, 3, 4)
