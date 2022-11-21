@@ -14,10 +14,14 @@ class CrewGameBase(object):
     def __init__(self, parameters: CrewGameParameters,
                  initial_state: CrewGameState) -> None:
 
-        assert parameters.number_of_players >= 2
-        assert parameters.number_of_colours >= 1
-        assert parameters.max_card_value >= 1
-        assert parameters.max_trump_value >= 0
+        if parameters.number_of_players < 2:
+            raise ValueError('Invalid number of players.')
+        if parameters.number_of_colours < 1:
+            raise ValueError('Invalid number of colours.')
+        if parameters.max_card_value < 1:
+            raise ValueError('Invalid maximum card value.')
+        if parameters.max_trump_value < 0:
+            raise ValueError('Invalid maximum trump card value.')
 
         self.parameters = parameters
         self.initial_state = initial_state
@@ -46,16 +50,19 @@ class CrewGameBase(object):
             self.player_hands = deal_cards(parameters)
 
         # The number of hands must match the number of players.
-        assert len(self.player_hands) == parameters.number_of_players
+        if len(self.player_hands) != parameters.number_of_players:
+            raise ValueError("Number of hands doesn't match number of players.")
 
         self.NUMBER_OF_TRICKS = len(self.player_hands[0])
 
         # All hands must contain the same number of cards.
         for hand in self.player_hands:
-            assert len(hand) == self.NUMBER_OF_TRICKS
+            if len(hand) != self.NUMBER_OF_TRICKS:
+                raise ValueError('Hands of different lengths.')
         # Each card may only occur once in the given distribution.
         for i, card in enumerate(self.player_hands):
-            assert card not in self.player_hands[:i]
+            if card in self.player_hands[:i]:
+                raise ValueError('Duplicate cards.')
 
         self._init_solver_setup()
         self._init_tasks_setup()
@@ -221,21 +228,32 @@ class CrewGameBase(object):
 
 
 class CrewGame(CrewGameBase):
+    """The regular game "The Crew" for 3, 4 or 5 players.
+
+    For 4 or 5 players, a standard card deck of 4 * 9 coloured cards and 4
+    trump cards is used.
+    For 3 players, a reduced deck of 3 * 9 coloured cards and 3 trump cards
+    is used instead.
+    A game may only contain either relative or absolute task order
+    constraints."""
 
     def __init__(self, parameters=DEFAULT_PARAMETERS,
                  initial_state: CrewGameState = CrewGameState()) -> None:
 
+        # Only standard parameters may be used.
         expected_parameters = (THREE_PLAYER_PARAMETERS,
                                FOUR_PLAYER_PARAMETERS,
                                FIVE_PLAYER_PARAMETERS)
-        assert parameters in expected_parameters
+        if parameters not in expected_parameters:
+            raise ValueError('Invalid parameters.')
+
+        # All task order constraints must be of the same type.
+        constraint_types = [t.relative_constraint for t in initial_state.tasks
+                            if t.order_constraint]
+        if not (all(constraint_types) or not any(constraint_types)):
+            raise ValueError('Mixed task order constraint types.')
 
         super().__init__(parameters, initial_state)
-
-        # This function assumes that a standard crew card deck with 4*9+4 cards
-        # is used for 4 and 5 players and 3*9+3 cards are used for 3 players.
-        # Additionally, we assume that we do not mix relative and absolute task
-        # order constraints.
 
         ordered_tasks = []
         last_task = None
@@ -258,9 +276,10 @@ class CrewGame(CrewGameBase):
 
     def add_card_task(self, tasked_player: int, card: Card = None) -> None:
         if card:
-            assert self._valid_card(card), \
-                f'Invalid card: ({card[0]}, {card[1]}).'
-            assert card not in self.tasks
+            if not self._valid_card(card):
+                raise ValueError(f'Invalid card: ({card[0]}, {card[1]}).')
+            if card in self.tasks:
+                raise ValueError('Card is already assigned in a task.')
         else:
             card = random.choice([c for hand in self.player_hands for c in hand
                                   if c not in self.task_cards
@@ -308,8 +327,10 @@ class CrewGame(CrewGameBase):
     # all tasks with an absolute order are finished 
     def add_task_constraint_absolute_order(self,
                                            ordered_tasks: list[Card]) -> None:
-        assert 1 <= len(ordered_tasks) <= len(self.tasks)
-        assert all([self._valid_card(card) for card in ordered_tasks])
+        if not 1 <= len(ordered_tasks) <= len(self.tasks):
+            raise ValueError('Too many tasks.')
+        if not all([self._valid_card(card) for card in ordered_tasks]):
+            raise ValueError('Invalid task card.')
 
         # Absolute order is specified as a set of relative order constraints.
         if len(ordered_tasks) > 1:
@@ -320,14 +341,16 @@ class CrewGame(CrewGameBase):
                 self.add_task_constraint_relative_order([o_task, u_task])
 
     def add_task_constraint_absolute_order_last(self, task: Card) -> None:
-        assert self._valid_card(task)
+        if not self._valid_card(task):
+            raise ValueError('Invalid task card.')
 
         # Absolute order is specified as a set of relative order constraints.
         for u_task in [u_t for u_t in self.task_cards if u_t != task]:
             self.add_task_constraint_relative_order([u_task, task])
 
     def add_special_task_no_tricks_value(self, forbidden_value: int) -> None:
-        assert 0 < forbidden_value <= self.parameters.max_card_value
+        if not 0 < forbidden_value <= self.parameters.max_card_value:
+            raise ValueError('Value out of bounds.')
 
         # No trick may be won with a card of the given value.
         for j in range(self.NUMBER_OF_TRICKS):
