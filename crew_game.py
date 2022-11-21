@@ -5,7 +5,8 @@ from z3 import And, Distinct, Implies, Int, IntVector, Or, sat, Solver, \
 
 from crew_types import Card, CardDistribution
 from crew_utils import deal_cards, CrewGameParameters, CrewGameState, \
-    CrewGameSolution, CrewGameTrick, DEFAULT_PARAMETERS
+    CrewGameSolution, CrewGameTrick, DEFAULT_PARAMETERS, \
+    THREE_PLAYER_PARAMETERS, FOUR_PLAYER_PARAMETERS, FIVE_PLAYER_PARAMETERS
 
 
 class CrewGameBase(object):
@@ -224,14 +225,10 @@ class CrewGame(CrewGameBase):
     def __init__(self, parameters=DEFAULT_PARAMETERS,
                  initial_state: CrewGameState = CrewGameState()) -> None:
 
-        assert parameters.number_of_players in (3, 4, 5)
-        assert parameters.max_card_value == 9
-        if parameters.number_of_players == 3:
-            assert parameters.number_of_colours == 3
-            assert parameters.max_trump_value == 3
-        else:
-            assert parameters.number_of_colours == 4
-            assert parameters.max_trump_value == 4
+        expected_parameters = (THREE_PLAYER_PARAMETERS,
+                               FOUR_PLAYER_PARAMETERS,
+                               FIVE_PLAYER_PARAMETERS)
+        assert parameters in expected_parameters
 
         super().__init__(parameters, initial_state)
 
