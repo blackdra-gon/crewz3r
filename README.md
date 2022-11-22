@@ -8,8 +8,8 @@ the [Z3 Theorem Prover ](https://github.com/Z3Prover/z3/).
 
 ## Webserver
 
-Start the server with `python3 server.py`.
-You can access the user interface at port `5000` via localhost or your local
+Start the server with `poetry python server.py`.
+You can access the user interface on port `5000` via localhost or your local
 network.
 
 ## Code style
