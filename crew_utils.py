@@ -49,7 +49,7 @@ class CrewGameTrick:
 @dataclass
 class CrewGameSolution:
     """A sequence of tricks that fulfill all tasks and requirements of a game
-    instance. """
+    instance."""
 
     initial_state: CrewGameState
     tricks: list[CrewGameTrick]

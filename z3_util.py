@@ -1,4 +1,4 @@
-from z3 import *
+from z3 import And, Not, Or
 
 
 # returns a Z3 formular which evaluates to true if exactly one of given bools

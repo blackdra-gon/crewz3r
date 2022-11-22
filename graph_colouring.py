@@ -1,4 +1,4 @@
-from z3 import *
+from z3 import Bool, Not, Or, Solver
 
 from z3_util import Exactly_one
 
@@ -28,9 +28,7 @@ edges = [
 # representing the colour of vertices
 # first index: number of vertex
 # second index: colour
-colors = [
-    [Bool("c_%s_%s" % (i, j)) for j in range(4)] for i in range(number_of_vertices)
-]
+colors = [[Bool(f"c_{i}_{j}") for j in range(4)] for i in range(number_of_vertices)]
 
 # pp(colors)
 

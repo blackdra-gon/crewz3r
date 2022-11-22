@@ -4,19 +4,19 @@ from z3 import And, CheckSatResult, Distinct, Implies, Int, IntVector, Or, Solve
 
 from crew_types import Card, CardDistribution
 from crew_utils import (
-    CrewGameParameters,
-    CrewGameSolution,
-    CrewGameState,
-    CrewGameTrick,
     DEFAULT_PARAMETERS,
     FIVE_PLAYER_PARAMETERS,
     FOUR_PLAYER_PARAMETERS,
     THREE_PLAYER_PARAMETERS,
+    CrewGameParameters,
+    CrewGameSolution,
+    CrewGameState,
+    CrewGameTrick,
     deal_cards,
 )
 
 
-class CrewGameBase(object):
+class CrewGameBase:
     def __init__(
         self, parameters: CrewGameParameters, initial_state: CrewGameState
     ) -> None:
@@ -79,7 +79,7 @@ class CrewGameBase(object):
         # The first represents the colour, the second the card value.
         self.cards = [
             [
-                IntVector("card_%s_%s" % (j, i), 2)
+                IntVector(f"card_{j}_{i}", 2)
                 for i in range(1, self.parameters.number_of_players + 1)
             ]
             for j in range(1, self.NUMBER_OF_TRICKS + 1)

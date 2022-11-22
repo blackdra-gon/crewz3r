@@ -1,4 +1,4 @@
-from z3 import *
+from z3 import And, Int, pp
 
 # Create list [1, ..., 5]
 print([x + 1 for x in range(5)])
@@ -19,5 +19,5 @@ print(X_gt_Y)
 print(And(X_gt_Y))
 
 # Create a 3x3 "matrix" (list of lists) of integer variables
-X = [[Int("x_%s_%s" % (i + 1, j + 1)) for j in range(3)] for i in range(3)]
+X = [[Int(f"x_{i + 1}_{j + 1}") for j in range(3)] for i in range(3)]
 pp(X)

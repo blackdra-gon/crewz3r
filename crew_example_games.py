@@ -4,9 +4,9 @@ from crew_game import CrewGame
 from crew_tasks import SpecialTask
 from crew_types import CardDistribution, Player
 from crew_utils import (
-    CrewGameState,
     DEFAULT_PARAMETERS,
     THREE_PLAYER_PARAMETERS,
+    CrewGameState,
     Task,
     deal_cards,
 )
