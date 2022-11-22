@@ -3,26 +3,14 @@ import json
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit
 
+from crew_utils import DEFAULT_PARAMETERS, get_deck
+
 app = Flask(__name__)
 
 # start websocket server
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# TODO: all_possible_cards should be calculated by crew_game logic
-# notation could be changed
-# when player
-card_max_value = 9
-trump_card_max_value = 4
-trump_color = "x"
-colors = {"r", "g", "b", "y"}
-all_possible_cards = set()
-
-for color in colors:
-    for value in range(1, card_max_value + 1):
-        all_possible_cards.add(color + str(value))
-
-for value in range(1, trump_card_max_value + 1):
-    all_possible_cards.add(trump_color + str(value))
+all_possible_cards = get_deck(DEFAULT_PARAMETERS)
 #############################################################################
 
 

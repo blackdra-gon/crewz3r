@@ -8,6 +8,7 @@ from crew_utils import (
     FIVE_PLAYER_PARAMETERS,
     FOUR_PLAYER_PARAMETERS,
     THREE_PLAYER_PARAMETERS,
+    TRUMP_COLOUR,
     CrewGameParameters,
     CrewGameSolution,
     CrewGameState,
@@ -32,9 +33,6 @@ class CrewGameBase:
 
         self.parameters = parameters
         self.initial_state = initial_state
-
-        # Internal constant representing the colour of trump cards.
-        self.TRUMP_COLOUR = -1
 
         # Rules for the game and the game setup.
         self.rules: dict[str, bool] = {
@@ -118,7 +116,7 @@ class CrewGameBase:
             for i in range(self.parameters.number_of_players):
                 self.solver.add(
                     Implies(
-                        (self.TRUMP_COLOUR, self.parameters.max_trump_value)
+                        (TRUMP_COLOUR, self.parameters.max_trump_value)
                         in self.player_hands[i],
                         self.starting_players[0] == i + 1,
                     )
@@ -161,7 +159,7 @@ class CrewGameBase:
                 # Only valid trump card values may be used.
                 s.add(
                     Implies(
-                        colour == self.TRUMP_COLOUR,
+                        colour == TRUMP_COLOUR,
                         value <= self.parameters.max_trump_value,
                     )
                 )
@@ -195,11 +193,11 @@ class CrewGameBase:
                     s.add(
                         Implies(
                             And(
-                                colour == self.TRUMP_COLOUR,
+                                colour == TRUMP_COLOUR,
                                 And(
                                     [
                                         Or(
-                                            self.cards[j][k][0] != self.TRUMP_COLOUR,
+                                            self.cards[j][k][0] != TRUMP_COLOUR,
                                             value > self.cards[j][k][1],
                                         )
                                         for k in range(
@@ -224,7 +222,7 @@ class CrewGameBase:
                             And(
                                 [
                                     And(
-                                        self.cards[j][k][0] != self.TRUMP_COLOUR,
+                                        self.cards[j][k][0] != TRUMP_COLOUR,
                                         Or(
                                             self.cards[j][k][0] != active_colour,
                                             value > self.cards[j][k][1],
@@ -258,7 +256,7 @@ class CrewGameBase:
         self.tasks: list[IntVector] = []
 
     def _valid_card(self, card: Card) -> bool:
-        if card[0] == self.TRUMP_COLOUR:
+        if card[0] == TRUMP_COLOUR:
             return 0 < card[1] <= self.parameters.max_trump_value
         if 0 <= card[0] < self.parameters.number_of_colours:
             return 0 < card[1] <= self.parameters.max_card_value
@@ -363,7 +361,7 @@ class CrewGame(CrewGameBase):
                     c
                     for hand in self.player_hands
                     for c in hand
-                    if c not in self.task_cards and c[0] != self.TRUMP_COLOUR
+                    if c not in self.task_cards and c[0] != TRUMP_COLOUR
                 ]
             )
         self.task_cards.append(card)

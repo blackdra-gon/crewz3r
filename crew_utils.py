@@ -4,6 +4,9 @@ from dataclasses import dataclass, field
 from crew_tasks import SpecialTask, Task
 from crew_types import Card, CardDistribution, Colour, Hand, Player
 
+# Internal constant representing the colour of trump cards.
+TRUMP_COLOUR: Colour = -1
+
 
 @dataclass
 class CrewGameParameters:
@@ -55,27 +58,29 @@ class CrewGameSolution:
     tricks: list[CrewGameTrick]
 
 
-def deal_cards(parameters: CrewGameParameters) -> CardDistribution:
-    number_of_players = parameters.number_of_players
-    number_of_colours = parameters.number_of_colours
-    max_card_value = parameters.max_card_value
-    max_trump_value = parameters.max_trump_value
-
-    trump_colour = -1
-    number_of_cards: int = number_of_colours * max_card_value + max_trump_value
-    number_of_tricks: int = number_of_cards // number_of_players
-    assert number_of_tricks * number_of_players == number_of_cards
-    remaining_cards: list[Card] = [
+def get_deck(parameters: CrewGameParameters) -> list[Card]:
+    return [
         (color, value)
-        for color in range(number_of_colours)
-        for value in range(1, max_card_value + 1)
+        for color in range(parameters.number_of_colours)
+        for value in range(1, parameters.max_card_value + 1)
     ] + [
-        (trump_colour, value)
-        for value in range(1, max_trump_value + 1)
-        if max_trump_value > 0
+        (TRUMP_COLOUR, value)
+        for value in range(1, parameters.max_trump_value + 1)
+        if parameters.max_trump_value > 0
     ]
+
+
+def deal_cards(parameters: CrewGameParameters) -> CardDistribution:
+    number_of_cards: int = (
+        parameters.number_of_colours * parameters.max_card_value
+        + parameters.max_trump_value
+    )
+    number_of_tricks: int = number_of_cards // parameters.number_of_players
+    if not number_of_tricks * parameters.number_of_players == number_of_cards:
+        raise ValueError("Invalid parameters.")
+    remaining_cards: list[Card] = get_deck(parameters)
     hands: list[Hand] = []
-    for i in range(number_of_players):
+    for i in range(parameters.number_of_players):
         hand = tuple(sorted(random.sample(remaining_cards, number_of_tricks)))
         for card in hand:
             remaining_cards.remove(card)
