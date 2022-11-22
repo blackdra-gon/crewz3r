@@ -36,3 +36,8 @@ Run the following commands to enable:
 `pip install pre-commit`
 
 `pre-commit install -f --install-hooks`
+
+## Dependencies
+
+Dependencies are managed through [poetry](https://python-poetry.org).
+After cloning the repository, run `poetry install` to install all dependencies.
