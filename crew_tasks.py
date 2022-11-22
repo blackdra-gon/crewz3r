@@ -8,9 +8,13 @@ class Task:
     If relative_constraint == False, we have an absolute order constraint.
     In this case -1 means: The task has to be completed last."""
 
-    def __init__(self, card: Card, player: Player,
-                 order_constraint: int = 0,
-                 relative_constraint: bool = False):
+    def __init__(
+        self,
+        card: Card,
+        player: Player,
+        order_constraint: int = 0,
+        relative_constraint: bool = False,
+    ):
         if relative_constraint:
             assert order_constraint in (0, 1, 2, 3, 4)
         else:
@@ -30,6 +34,5 @@ class SpecialTask:
 
 class NoTricksWithValueTask(SpecialTask):
     def __init__(self, forbidden_value):
-        super().__init__(f'No tricks may be won with cards of value '
-                         f'{forbidden_value}.')
+        super().__init__(f"No tricks may be won with cards of value {forbidden_value}.")
         self.forbidden_value = forbidden_value

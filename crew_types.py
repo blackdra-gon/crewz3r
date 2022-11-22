@@ -1,7 +1,7 @@
 from typing import TypeAlias
 
-# Type alias for cards: The first integer represents the color (or suit),
-# the second determines the card value.
+# Type alias for cards: The first integer represents the color (or suit), the second
+# determines the card value.
 Card: TypeAlias = tuple[int, int]
 
 Hand: TypeAlias = tuple[Card, ...]

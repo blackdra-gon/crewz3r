@@ -1,27 +1,34 @@
 import random
 
-from z3 import And, Distinct, Implies, Int, IntVector, Or, sat, Solver, \
-    CheckSatResult
+from z3 import And, CheckSatResult, Distinct, Implies, Int, IntVector, Or, Solver, sat
 
 from crew_types import Card, CardDistribution
-from crew_utils import deal_cards, CrewGameParameters, CrewGameState, \
-    CrewGameSolution, CrewGameTrick, DEFAULT_PARAMETERS, \
-    THREE_PLAYER_PARAMETERS, FOUR_PLAYER_PARAMETERS, FIVE_PLAYER_PARAMETERS
+from crew_utils import (
+    CrewGameParameters,
+    CrewGameSolution,
+    CrewGameState,
+    CrewGameTrick,
+    DEFAULT_PARAMETERS,
+    FIVE_PLAYER_PARAMETERS,
+    FOUR_PLAYER_PARAMETERS,
+    THREE_PLAYER_PARAMETERS,
+    deal_cards,
+)
 
 
 class CrewGameBase(object):
-
-    def __init__(self, parameters: CrewGameParameters,
-                 initial_state: CrewGameState) -> None:
+    def __init__(
+        self, parameters: CrewGameParameters, initial_state: CrewGameState
+    ) -> None:
 
         if parameters.number_of_players < 2:
-            raise ValueError('Invalid number of players.')
+            raise ValueError("Invalid number of players.")
         if parameters.number_of_colours < 1:
-            raise ValueError('Invalid number of colours.')
+            raise ValueError("Invalid number of colours.")
         if parameters.max_card_value < 1:
-            raise ValueError('Invalid maximum card value.')
+            raise ValueError("Invalid maximum card value.")
         if parameters.max_trump_value < 0:
-            raise ValueError('Invalid maximum trump card value.')
+            raise ValueError("Invalid maximum trump card value.")
 
         self.parameters = parameters
         self.initial_state = initial_state
@@ -31,13 +38,13 @@ class CrewGameBase(object):
 
         # Rules for the game and the game setup.
         self.rules: dict[str, bool] = {
-            'use_trump_cards': parameters.max_trump_value != 0,
-            'highest_trump_starts_first_trick': True,
+            "use_trump_cards": parameters.max_trump_value != 0,
+            "highest_trump_starts_first_trick": True,
         }
 
         # When the first starting player is given
         if initial_state.active_player:
-            self.rules['highest_trump_starts_first_trick'] = False
+            self.rules["highest_trump_starts_first_trick"] = False
 
         # If the solver has been run.
         self.is_solved: bool = False
@@ -58,11 +65,11 @@ class CrewGameBase(object):
         # All hands must contain the same number of cards.
         for hand in self.player_hands:
             if len(hand) != self.NUMBER_OF_TRICKS:
-                raise ValueError('Hands of different lengths.')
+                raise ValueError("Hands of different lengths.")
         # Each card may only occur once in the given distribution.
         for i, card in enumerate(self.player_hands):
             if card in self.player_hands[:i]:
-                raise ValueError('Duplicate cards.')
+                raise ValueError("Duplicate cards.")
 
         self._init_solver_setup()
         self._init_tasks_setup()
@@ -70,37 +77,56 @@ class CrewGameBase(object):
     def _init_solver_setup(self):
         # A card is represented by two integers.
         # The first represents the colour, the second the card value.
-        self.cards = [[IntVector('card_%s_%s' % (j, i), 2)
-                       for i in range(1, self.parameters.number_of_players + 1)]
-                      for j in range(1, self.NUMBER_OF_TRICKS + 1)]
+        self.cards = [
+            [
+                IntVector("card_%s_%s" % (j, i), 2)
+                for i in range(1, self.parameters.number_of_players + 1)
+            ]
+            for j in range(1, self.NUMBER_OF_TRICKS + 1)
+        ]
 
-        # Lists of integers store the starting player, active colour and winner
-        # for each trick.
-        self.starting_players = \
-            [Int('s_%s' % i) for i in range(1, self.NUMBER_OF_TRICKS + 1)]
-        self.active_colours = \
-            [Int('a_%s' % i) for i in range(1, self.NUMBER_OF_TRICKS + 1)]
-        self.trick_winners = \
-            [Int('w_%s' % i) for i in range(1, self.NUMBER_OF_TRICKS + 1)]
+        # Lists of integers store the starting player, active colour and winner for
+        # each trick.
+        self.starting_players = [
+            Int("s_%s" % i) for i in range(1, self.NUMBER_OF_TRICKS + 1)
+        ]
+        self.active_colours = [
+            Int("a_%s" % i) for i in range(1, self.NUMBER_OF_TRICKS + 1)
+        ]
+        self.trick_winners = [
+            Int("w_%s" % i) for i in range(1, self.NUMBER_OF_TRICKS + 1)
+        ]
 
         self.solver = Solver()
 
         # Each card may occur only once.
         self.solver.add(
-            Distinct(*[card[0] * self.parameters.max_card_value + card[1]
-                       for trick in self.cards for card in trick]))
+            Distinct(
+                *[
+                    card[0] * self.parameters.max_card_value + card[1]
+                    for trick in self.cards
+                    for card in trick
+                ]
+            )
+        )
 
         # The player with the highest trump card starts the first trick.
-        if self.rules['use_trump_cards'] and \
-                self.rules['highest_trump_starts_first_trick']:
+        if (
+            self.rules["use_trump_cards"]
+            and self.rules["highest_trump_starts_first_trick"]
+        ):
             for i in range(self.parameters.number_of_players):
-                self.solver.add(Implies(
-                    (self.TRUMP_COLOUR, self.parameters.max_trump_value)
-                    in self.player_hands[i],
-                    self.starting_players[0] == i + 1))
+                self.solver.add(
+                    Implies(
+                        (self.TRUMP_COLOUR, self.parameters.max_trump_value)
+                        in self.player_hands[i],
+                        self.starting_players[0] == i + 1,
+                    )
+                )
         elif self.initial_state.active_player:
             self.solver.add(
-                self.starting_players[0] == self.initial_state.active_player)
+                self.starting_players[0] == self.initial_state.active_player
+            )
 
         for j in range(self.NUMBER_OF_TRICKS):
 
@@ -133,56 +159,99 @@ class CrewGameBase(object):
                 s.add(value <= self.parameters.max_card_value)
 
                 # Only valid trump card values may be used.
-                s.add(Implies(colour == self.TRUMP_COLOUR,
-                              value <= self.parameters.max_trump_value))
+                s.add(
+                    Implies(
+                        colour == self.TRUMP_COLOUR,
+                        value <= self.parameters.max_trump_value,
+                    )
+                )
 
                 # Players may only play cards that they hold.
-                s.add(Or([And(colour == c[0], value == c[1])
-                          for c in self.player_hands[i]]))
+                s.add(
+                    Or(
+                        [
+                            And(colour == c[0], value == c[1])
+                            for c in self.player_hands[i]
+                        ]
+                    )
+                )
 
-                # If a player wins a trick, that player is the starting player
-                # in the next trick.
+                # If a player wins a trick, that player is the starting player in the
+                # next trick.
                 if j + 1 != self.NUMBER_OF_TRICKS:
-                    s.add(Implies(trick_winner == player,
-                                  self.starting_players[j + 1] == player))
+                    s.add(
+                        Implies(
+                            trick_winner == player,
+                            self.starting_players[j + 1] == player,
+                        )
+                    )
 
                 # The colour played by the starting player is the active colour.
-                s.add(Implies(starting_player == player,
-                              active_colour == colour))
+                s.add(Implies(starting_player == player, active_colour == colour))
 
-                # Case 1: The player has played a trump card.
-                # If the player's card is the highest trump card in the trick,
+                # Case 1: The player has played a trump card. If the player's card is
+                # the highest trump card in the trick, that player has won the trick.
+                if self.rules["use_trump_cards"]:
+                    s.add(
+                        Implies(
+                            And(
+                                colour == self.TRUMP_COLOUR,
+                                And(
+                                    [
+                                        Or(
+                                            self.cards[j][k][0] != self.TRUMP_COLOUR,
+                                            value > self.cards[j][k][1],
+                                        )
+                                        for k in range(
+                                            self.parameters.number_of_players
+                                        )
+                                        if i != k
+                                    ]
+                                ),
+                            ),
+                            trick_winner == player,
+                        )
+                    )
+
+                # Case 2: The player has not played a trump card and no trump card is
+                # present in the trick. If the player's card is of the active colour
+                # and higher than all other cards of the active colour in the trick,
                 # that player has won the trick.
-                if self.rules['use_trump_cards']:
-                    s.add(Implies(And(colour == self.TRUMP_COLOUR,
-                                      And([Or(self.cards[j][k][0] !=
-                                              self.TRUMP_COLOUR,
-                                              value > self.cards[j][k][1])
-                                           for k in range(
-                                              self.parameters.number_of_players)
-                                           if i != k])),
-                                  trick_winner == player))
+                s.add(
+                    Implies(
+                        And(
+                            colour == active_colour,
+                            And(
+                                [
+                                    And(
+                                        self.cards[j][k][0] != self.TRUMP_COLOUR,
+                                        Or(
+                                            self.cards[j][k][0] != active_colour,
+                                            value > self.cards[j][k][1],
+                                        ),
+                                    )
+                                    for k in range(self.parameters.number_of_players)
+                                    if i != k
+                                ]
+                            ),
+                        ),
+                        trick_winner == player,
+                    )
+                )
 
-                # Case 2: The player has not played a trump card and no trump
-                # card is present in the trick.
-                # If the player's card is of the active colour and higher
-                # than all other cards of the active colour in the trick,
-                # that player has won the trick.
-                s.add(Implies(
-                    And(colour == active_colour,
-                        And([And(self.cards[j][k][0] != self.TRUMP_COLOUR,
-                                 Or(self.cards[j][k][0] != active_colour,
-                                    value > self.cards[j][k][1]))
-                             for k in range(self.parameters.number_of_players)
-                             if i != k])),
-                    trick_winner == player))
-
-                # If a player holds a card of the active colour, that player may
-                # only play a card of that colour.
-                s.add(Implies(Or([self.cards[m][i][0] == active_colour
-                                  for m in range(j + 1,
-                                                 self.NUMBER_OF_TRICKS)]),
-                              colour == active_colour))
+                # If a player holds a card of the active colour, that player may only
+                # play a card of that colour.
+                s.add(
+                    Implies(
+                        Or(
+                            [
+                                self.cards[m][i][0] == active_colour
+                                for m in range(j + 1, self.NUMBER_OF_TRICKS)
+                            ]
+                        ),
+                        colour == active_colour,
+                    )
+                )
 
     def _init_tasks_setup(self):
         self.task_cards: list[Card] = []
@@ -237,21 +306,27 @@ class CrewGame(CrewGameBase):
     A game may only contain either relative or absolute task order
     constraints."""
 
-    def __init__(self, parameters=DEFAULT_PARAMETERS,
-                 initial_state: CrewGameState = CrewGameState()) -> None:
+    def __init__(
+        self,
+        parameters=DEFAULT_PARAMETERS,
+        initial_state: CrewGameState = CrewGameState(),
+    ) -> None:
 
         # Only standard parameters may be used.
-        expected_parameters = (THREE_PLAYER_PARAMETERS,
-                               FOUR_PLAYER_PARAMETERS,
-                               FIVE_PLAYER_PARAMETERS)
+        expected_parameters = (
+            THREE_PLAYER_PARAMETERS,
+            FOUR_PLAYER_PARAMETERS,
+            FIVE_PLAYER_PARAMETERS,
+        )
         if parameters not in expected_parameters:
-            raise ValueError('Invalid parameters.')
+            raise ValueError("Invalid parameters.")
 
         # All task order constraints must be of the same type.
-        constraint_types = [t.relative_constraint for t in initial_state.tasks
-                            if t.order_constraint]
+        constraint_types = [
+            t.relative_constraint for t in initial_state.tasks if t.order_constraint
+        ]
         if not (all(constraint_types) or not any(constraint_types)):
-            raise ValueError('Mixed task order constraint types.')
+            raise ValueError("Mixed task order constraint types.")
 
         super().__init__(parameters, initial_state)
 
@@ -267,30 +342,37 @@ class CrewGame(CrewGameBase):
             ordered_tasks.sort(key=lambda o_task: o_task.order_constraint)
             if ordered_tasks[0].relative_constraint:
                 self.add_task_constraint_relative_order(
-                    [task.card for task in ordered_tasks])
+                    [task.card for task in ordered_tasks]
+                )
             else:
                 self.add_task_constraint_absolute_order(
-                    [task.card for task in ordered_tasks])
+                    [task.card for task in ordered_tasks]
+                )
         if last_task:
             self.add_task_constraint_absolute_order_last(last_task.card)
 
     def add_card_task(self, tasked_player: int, card: Card = None) -> None:
         if card:
             if not self._valid_card(card):
-                raise ValueError(f'Invalid card: ({card[0]}, {card[1]}).')
+                raise ValueError(f"Invalid card: ({card[0]}, {card[1]}).")
             if card in self.tasks:
-                raise ValueError('Card is already assigned in a task.')
+                raise ValueError("Card is already assigned in a task.")
         else:
-            card = random.choice([c for hand in self.player_hands for c in hand
-                                  if c not in self.task_cards
-                                  and c[0] != self.TRUMP_COLOUR])
+            card = random.choice(
+                [
+                    c
+                    for hand in self.player_hands
+                    for c in hand
+                    if c not in self.task_cards and c[0] != self.TRUMP_COLOUR
+                ]
+            )
         self.task_cards.append(card)
 
         # A task is represented by four integers:
         # - The first two represent the card color and value,
         # - the third represents the tasked player,
         # - the fourth stores the trick in which the task was completed
-        new_task = IntVector('task_%s' % str(len(self.tasks) + 1), 4)
+        new_task = IntVector("task_%s" % str(len(self.tasks) + 1), 4)
         self.tasks.append(new_task)
         self.solver.add(new_task[0] == card[0])
         self.solver.add(new_task[1] == card[1])
@@ -301,15 +383,16 @@ class CrewGame(CrewGameBase):
         # If a trick contains the task card, that trick must be won by the
         # tasked player. The task is then completed.
         for j in range(self.NUMBER_OF_TRICKS):
-            self.solver.add(Implies(Or([And(card[0] == c[0], card[1] == c[1])
-                                        for c in self.cards[j]]),
-                                    And(self.trick_winners[j] == tasked_player,
-                                        new_task[3] == j)))
+            self.solver.add(
+                Implies(
+                    Or([And(card[0] == c[0], card[1] == c[1]) for c in self.cards[j]]),
+                    And(self.trick_winners[j] == tasked_player, new_task[3] == j),
+                )
+            )
 
-    # parameter ordered_task: a tuple of task cards in the order, in which 
-    # they have to be fulfilled has no influence on the other task cards. 
-    def add_task_constraint_relative_order(self,
-                                           ordered_tasks: list[Card]) -> None:
+    # parameter ordered_task: a tuple of task cards in the order, in which
+    # they have to be fulfilled has no influence on the other task cards.
+    def add_task_constraint_relative_order(self, ordered_tasks: list[Card]) -> None:
         assert 1 < len(ordered_tasks) <= len(self.tasks)
         assert all([self._valid_card(card) for card in ordered_tasks])
 
@@ -319,30 +402,27 @@ class CrewGame(CrewGameBase):
             next_task_index = self.task_cards.index(next_task)
             # using the fourth field of a task, which stores the trick in
             # which it is fulfilled
-            self.solver.add(
-                self.tasks[task_index][3] <= self.tasks[next_task_index][3])
+            self.solver.add(self.tasks[task_index][3] <= self.tasks[next_task_index][3])
 
-    # parameter ordered_task: a tuple of task cards in the order, in which 
-    # they have to be fulfilled all other tasks have to be fulfilled after 
-    # all tasks with an absolute order are finished 
-    def add_task_constraint_absolute_order(self,
-                                           ordered_tasks: list[Card]) -> None:
+    # parameter ordered_task: a tuple of task cards in the order, in which
+    # they have to be fulfilled all other tasks have to be fulfilled after
+    # all tasks with an absolute order are finished
+    def add_task_constraint_absolute_order(self, ordered_tasks: list[Card]) -> None:
         if not 1 <= len(ordered_tasks) <= len(self.tasks):
-            raise ValueError('Too many tasks.')
+            raise ValueError("Too many tasks.")
         if not all([self._valid_card(card) for card in ordered_tasks]):
-            raise ValueError('Invalid task card.')
+            raise ValueError("Invalid task card.")
 
         # Absolute order is specified as a set of relative order constraints.
         if len(ordered_tasks) > 1:
             self.add_task_constraint_relative_order(ordered_tasks)
         for i, o_task in enumerate(ordered_tasks):
-            for u_task in [u_t for u_t in self.task_cards
-                           if u_t not in ordered_tasks]:
+            for u_task in [u_t for u_t in self.task_cards if u_t not in ordered_tasks]:
                 self.add_task_constraint_relative_order([o_task, u_task])
 
     def add_task_constraint_absolute_order_last(self, task: Card) -> None:
         if not self._valid_card(task):
-            raise ValueError('Invalid task card.')
+            raise ValueError("Invalid task card.")
 
         # Absolute order is specified as a set of relative order constraints.
         for u_task in [u_t for u_t in self.task_cards if u_t != task]:
@@ -350,11 +430,14 @@ class CrewGame(CrewGameBase):
 
     def add_special_task_no_tricks_value(self, forbidden_value: int) -> None:
         if not 0 < forbidden_value <= self.parameters.max_card_value:
-            raise ValueError('Value out of bounds.')
+            raise ValueError("Value out of bounds.")
 
         # No trick may be won with a card of the given value.
         for j in range(self.NUMBER_OF_TRICKS):
             for i in range(self.parameters.number_of_players):
                 self.solver.add(
-                    Implies(self.cards[j][i][1] == forbidden_value,
-                            self.cards[j][i][0] != self.active_colours[j]))
+                    Implies(
+                        self.cards[j][i][1] == forbidden_value,
+                        self.cards[j][i][0] != self.active_colours[j],
+                    )
+                )
