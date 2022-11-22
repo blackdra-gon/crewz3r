@@ -25,6 +25,11 @@ quality assurance tools automatically:
 - [flake8](https://github.com/PyCQA/flake8)
 - [prettier](https://github.com/pre-commit/mirrors-prettier)
 
+The [MyPy](https://github.com/pre-commit/mirrors-mypy/)
+type checker can be run manually with:
+
+`pre-commit run -a --hook-stage manual mypy`.
+
 This project uses the [Black](https://github.com/psf/black) auto-formatter to enforce a
 consistent code style. For editor/IDE integration, see
 [the documentation](https://black.readthedocs.io/en/stable/integrations/editors.html).

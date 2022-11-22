@@ -138,6 +138,8 @@ def print_special_tasks(tasks: list[SpecialTask]):
 def print_initial_game_state(parameters: CrewGameParameters, game_state: CrewGameState):
     print("\nGame parameters:")
     print_game_parameters(parameters)
+    if not game_state.hands:
+        raise ValueError("Hands not specified.")
     print("\nCard distribution:")
     print_card_distribution(game_state.hands)
     print("\nTasks:")

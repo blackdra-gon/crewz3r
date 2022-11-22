@@ -56,3 +56,11 @@ repos:
       - id: poetry-check
       - id: poetry-lock
         args: [--no-update]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v0.991
+    hooks:
+      - id: mypy
+        stages: [manual]
+        additional_dependencies:
+          [z3-solver==4.11.2.0, Flask==2.2.2, Flask-SocketIO==5.3.2]

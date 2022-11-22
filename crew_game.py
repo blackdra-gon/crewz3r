@@ -50,8 +50,10 @@ class CrewGameBase:
         # The solver result.
         self.check_result: CheckSatResult | None = None
 
-        self.player_hands: CardDistribution = initial_state.hands
-        if not self.player_hands:
+        self.player_hands: CardDistribution
+        if initial_state.hands:
+            self.player_hands = initial_state.hands
+        else:
             self.player_hands = deal_cards(parameters)
 
         # The number of hands must match the number of players.
@@ -251,7 +253,7 @@ class CrewGameBase:
                     )
                 )
 
-    def _init_tasks_setup(self):
+    def _init_tasks_setup(self) -> None:
         self.task_cards: list[Card] = []
         self.tasks: list[IntVector] = []
 
@@ -269,13 +271,12 @@ class CrewGameBase:
     def has_solution(self) -> bool | None:
         return self.check_result == sat if self.is_solved else None
 
-    def get_solution(self) -> CrewGameSolution | None:
+    def get_solution(self) -> CrewGameSolution:
 
         if not self.is_solved:
-            return None
-
+            raise ValueError("This game hasn't been solved.")
         if not self.has_solution():
-            raise ValueError
+            raise ValueError("This game has no solution.")
 
         tricks: list[CrewGameTrick] = []
 
@@ -349,7 +350,7 @@ class CrewGame(CrewGameBase):
         if last_task:
             self.add_task_constraint_absolute_order_last(last_task.card)
 
-    def add_card_task(self, tasked_player: int, card: Card = None) -> None:
+    def add_card_task(self, tasked_player: int, card: Card | None = None) -> None:
         if card:
             if not self._valid_card(card):
                 raise ValueError(f"Invalid card: ({card[0]}, {card[1]}).")
