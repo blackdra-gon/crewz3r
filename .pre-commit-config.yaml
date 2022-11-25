@@ -74,3 +74,21 @@ repos:
         stages: [manual]
         additional_dependencies:
           [z3-solver==4.11.2.0, Flask==2.2.2, Flask-SocketIO==5.3.2]
+        args:
+          [
+            --ignore-missing-imports,
+            --disallow-any-generics,
+            --disallow-subclassing-any,
+            --disallow-untyped-defs,
+            --disallow-incomplete-defs,
+            --check-untyped-defs,
+            --warn-redundant-casts,
+            --warn-unused-ignores,
+            --warn-return-any,
+            --warn-unreachable,
+            --strict-equality,
+            --show-error-context,
+            --show-column-numbers,
+            --show-error-end,
+            --pretty,
+          ]

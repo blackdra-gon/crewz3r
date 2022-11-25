@@ -14,13 +14,13 @@ class Task:
         player: Player,
         order_constraint: int = 0,
         relative_constraint: bool = False,
-    ):
+    ) -> None:
         if relative_constraint:
             assert order_constraint in (0, 1, 2, 3, 4)
         else:
             assert order_constraint in (-1, 0, 1, 2, 3, 4, 5)
-        self.card = card
-        self.player = player
+        self.card: Card = card
+        self.player: Player = player
         self.order_constraint: int = order_constraint
         self.relative_constraint: bool = relative_constraint
 
@@ -28,11 +28,11 @@ class Task:
 class SpecialTask:
     """Base class for all non-standard tasks."""
 
-    def __init__(self, description: str):
+    def __init__(self, description: str) -> None:
         self.description = description
 
 
 class NoTricksWithValueTask(SpecialTask):
-    def __init__(self, forbidden_value):
+    def __init__(self, forbidden_value: int) -> None:
         super().__init__(f"No tricks may be won with cards of value {forbidden_value}.")
-        self.forbidden_value = forbidden_value
+        self.forbidden_value: int = forbidden_value

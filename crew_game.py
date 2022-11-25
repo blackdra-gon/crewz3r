@@ -1,8 +1,21 @@
 import random
 
-from z3 import And, CheckSatResult, Distinct, Implies, Int, IntVector, Or, Solver, sat
+from z3 import (
+    And,
+    ArithRef,
+    CheckSatResult,
+    Distinct,
+    Implies,
+    Int,
+    IntVector,
+    ModelRef,
+    Or,
+    Solver,
+    sat,
+)
 
-from crew_types import Card, CardDistribution
+from crew_tasks import Task
+from crew_types import Card, CardDistribution, Colour, Player
 from crew_utils import (
     DEFAULT_PARAMETERS,
     FIVE_PLAYER_PARAMETERS,
@@ -31,8 +44,8 @@ class CrewGameBase:
         if parameters.max_trump_value < 0:
             raise ValueError("Invalid maximum trump card value.")
 
-        self.parameters = parameters
-        self.initial_state = initial_state
+        self.parameters: CrewGameParameters = parameters
+        self.initial_state: CrewGameState = initial_state
 
         # Rules for the game and the game setup.
         self.rules: dict[str, bool] = {
@@ -60,24 +73,28 @@ class CrewGameBase:
         if len(self.player_hands) != parameters.number_of_players:
             raise ValueError("Number of hands doesn't match number of players.")
 
-        self.NUMBER_OF_TRICKS = len(self.player_hands[0])
+        self.NUMBER_OF_TRICKS: int = len(self.player_hands[0])
 
         # All hands must contain the same number of cards.
         for hand in self.player_hands:
             if len(hand) != self.NUMBER_OF_TRICKS:
                 raise ValueError("Hands of different lengths.")
         # Each card may only occur once in the given distribution.
-        for i, card in enumerate(self.player_hands):
-            if card in self.player_hands[:i]:
-                raise ValueError("Duplicate cards.")
+        for j, hand in enumerate(self.player_hands):
+            for i, card in enumerate(hand):
+                if any(
+                    [card in h for h in self.player_hands[j + 1 :]]
+                    + [card == c for c in hand[i + 1 :]]
+                ):
+                    raise ValueError("Duplicate cards.")
 
         self._init_solver_setup()
         self._init_tasks_setup()
 
-    def _init_solver_setup(self):
+    def _init_solver_setup(self) -> None:
         # A card is represented by two integers.
         # The first represents the colour, the second the card value.
-        self.cards = [
+        self.cards: list[list[list[ArithRef]]] = [
             [
                 IntVector(f"card_{j}_{i}", 2)
                 for i in range(1, self.parameters.number_of_players + 1)
@@ -87,17 +104,17 @@ class CrewGameBase:
 
         # Lists of integers store the starting player, active colour and winner for
         # each trick.
-        self.starting_players = [
-            Int("s_%s" % i) for i in range(1, self.NUMBER_OF_TRICKS + 1)
+        self.starting_players: list[ArithRef] = [
+            Int(f"s_{i}") for i in range(1, self.NUMBER_OF_TRICKS + 1)
         ]
-        self.active_colours = [
-            Int("a_%s" % i) for i in range(1, self.NUMBER_OF_TRICKS + 1)
+        self.active_colours: list[ArithRef] = [
+            Int(f"a_{i}") for i in range(1, self.NUMBER_OF_TRICKS + 1)
         ]
-        self.trick_winners = [
-            Int("w_%s" % i) for i in range(1, self.NUMBER_OF_TRICKS + 1)
+        self.trick_winners: list[ArithRef] = [
+            Int(f"w_{i}") for i in range(1, self.NUMBER_OF_TRICKS + 1)
         ]
 
-        self.solver = Solver()
+        self.solver: Solver = Solver()
 
         # Each card may occur only once.
         self.solver.add(
@@ -130,10 +147,10 @@ class CrewGameBase:
 
         for j in range(self.NUMBER_OF_TRICKS):
 
-            starting_player = self.starting_players[j]
-            active_colour = self.active_colours[j]
-            trick_winner = self.trick_winners[j]
-            s = self.solver
+            starting_player: ArithRef = self.starting_players[j]
+            active_colour: ArithRef = self.active_colours[j]
+            trick_winner: ArithRef = self.trick_winners[j]
+            s: Solver = self.solver
 
             # Only valid player indices may be used.
             s.add(0 < trick_winner)
@@ -147,8 +164,9 @@ class CrewGameBase:
 
             for i in range(self.parameters.number_of_players):
 
-                colour, value = self.cards[j][i][0], self.cards[j][i][1]
-                player = i + 1
+                colour: ArithRef = self.cards[j][i][0]
+                value: ArithRef = self.cards[j][i][1]
+                player: Player = i + 1
 
                 # Only valid colour indices may be used.
                 s.add(-1 <= colour)
@@ -255,7 +273,7 @@ class CrewGameBase:
 
     def _init_tasks_setup(self) -> None:
         self.task_cards: list[Card] = []
-        self.tasks: list[IntVector] = []
+        self.tasks: list[list[ArithRef]] = []
 
     def _valid_card(self, card: Card) -> bool:
         if card[0] == TRUMP_COLOUR:
@@ -280,15 +298,15 @@ class CrewGameBase:
 
         tricks: list[CrewGameTrick] = []
 
-        m = self.solver.model()
+        m: ModelRef = self.solver.model()
         for j in range(self.NUMBER_OF_TRICKS):
-            ac = m.evaluate(self.active_colours[j]).as_long()
-            sp = m.evaluate(self.starting_players[j]).as_long()
-            wp = m.evaluate(self.trick_winners[j]).as_long()
-            cards = []
+            ac: Colour = m.evaluate(self.active_colours[j]).as_long()
+            sp: Player = m.evaluate(self.starting_players[j]).as_long()
+            wp: Player = m.evaluate(self.trick_winners[j]).as_long()
+            cards: list[Card] = []
             for i in range(self.parameters.number_of_players):
-                colour = m.evaluate(self.cards[j][i][0]).as_long()
-                value = m.evaluate(self.cards[j][i][1]).as_long()
+                colour: Colour = m.evaluate(self.cards[j][i][0]).as_long()
+                value: int = m.evaluate(self.cards[j][i][1]).as_long()
                 cards.append((colour, value))
             tricks.append(CrewGameTrick(cards, ac, sp, wp))
 
@@ -307,12 +325,12 @@ class CrewGame(CrewGameBase):
 
     def __init__(
         self,
-        parameters=DEFAULT_PARAMETERS,
+        parameters: CrewGameParameters = DEFAULT_PARAMETERS,
         initial_state: CrewGameState = CrewGameState(),
     ) -> None:
 
         # Only standard parameters may be used.
-        expected_parameters = (
+        expected_parameters: tuple[CrewGameParameters, ...] = (
             THREE_PLAYER_PARAMETERS,
             FOUR_PLAYER_PARAMETERS,
             FIVE_PLAYER_PARAMETERS,
@@ -321,7 +339,7 @@ class CrewGame(CrewGameBase):
             raise ValueError("Invalid parameters.")
 
         # All task order constraints must be of the same type.
-        constraint_types = [
+        constraint_types: list[bool] = [
             t.relative_constraint for t in initial_state.tasks if t.order_constraint
         ]
         if not (all(constraint_types) or not any(constraint_types)):
@@ -329,8 +347,8 @@ class CrewGame(CrewGameBase):
 
         super().__init__(parameters, initial_state)
 
-        ordered_tasks = []
-        last_task = None
+        ordered_tasks: list[Task] = []
+        last_task: Task | None = None
         for task in initial_state.tasks:
             self.add_card_task(task.player, task.card)
             if task.order_constraint > 0:
@@ -351,13 +369,15 @@ class CrewGame(CrewGameBase):
             self.add_task_constraint_absolute_order_last(last_task.card)
 
     def add_card_task(self, tasked_player: int, card: Card | None = None) -> None:
+        task_card: Card
         if card:
             if not self._valid_card(card):
                 raise ValueError(f"Invalid card: ({card[0]}, {card[1]}).")
-            if card in self.tasks:
+            if card in self.task_cards:
                 raise ValueError("Card is already assigned in a task.")
+            task_card = card
         else:
-            card = random.choice(
+            task_card = random.choice(
                 [
                     c
                     for hand in self.player_hands
@@ -365,16 +385,16 @@ class CrewGame(CrewGameBase):
                     if c not in self.task_cards and c[0] != TRUMP_COLOUR
                 ]
             )
-        self.task_cards.append(card)
+        self.task_cards.append(task_card)
 
         # A task is represented by four integers:
         # - The first two represent the card color and value,
         # - the third represents the tasked player,
         # - the fourth stores the trick in which the task was completed
-        new_task = IntVector("task_%s" % str(len(self.tasks) + 1), 4)
+        new_task: list[ArithRef] = IntVector(f"task_{str(len(self.tasks) + 1)}", 4)
         self.tasks.append(new_task)
-        self.solver.add(new_task[0] == card[0])
-        self.solver.add(new_task[1] == card[1])
+        self.solver.add(new_task[0] == task_card[0])
+        self.solver.add(new_task[1] == task_card[1])
         self.solver.add(new_task[2] == tasked_player)
         self.solver.add(0 < new_task[3])
         self.solver.add(new_task[3] <= self.NUMBER_OF_TRICKS)
@@ -384,7 +404,12 @@ class CrewGame(CrewGameBase):
         for j in range(self.NUMBER_OF_TRICKS):
             self.solver.add(
                 Implies(
-                    Or([And(card[0] == c[0], card[1] == c[1]) for c in self.cards[j]]),
+                    Or(
+                        [
+                            And(task_card[0] == c[0], task_card[1] == c[1])
+                            for c in self.cards[j]
+                        ]
+                    ),
                     And(self.trick_winners[j] == tasked_player, new_task[3] == j),
                 )
             )
@@ -396,16 +421,16 @@ class CrewGame(CrewGameBase):
         assert all([self._valid_card(card) for card in ordered_tasks])
 
         for i, o_task in enumerate(ordered_tasks[:-1]):
-            task_index = self.task_cards.index(o_task)
-            next_task = ordered_tasks[i + 1]
-            next_task_index = self.task_cards.index(next_task)
-            # using the fourth field of a task, which stores the trick in
-            # which it is fulfilled
+            task_index: int = self.task_cards.index(o_task)
+            next_task_card: Card = ordered_tasks[i + 1]
+            next_task_index = self.task_cards.index(next_task_card)
+            # Using the fourth field of a task, which stores the trick in which it is
+            # completed.
             self.solver.add(self.tasks[task_index][3] <= self.tasks[next_task_index][3])
 
-    # parameter ordered_task: a tuple of task cards in the order, in which
-    # they have to be fulfilled all other tasks have to be fulfilled after
-    # all tasks with an absolute order are finished
+    # Parameter ordered_task: a tuple of task cards, in the order in which they have to
+    # be completed. All other tasks must be completed after all tasks with an absolute
+    # order are finished.
     def add_task_constraint_absolute_order(self, ordered_tasks: list[Card]) -> None:
         if not 1 <= len(ordered_tasks) <= len(self.tasks):
             raise ValueError("Too many tasks.")

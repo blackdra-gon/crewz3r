@@ -81,7 +81,9 @@ def deal_cards(parameters: CrewGameParameters) -> CardDistribution:
     remaining_cards: list[Card] = get_deck(parameters)
     hands: list[Hand] = []
     for i in range(parameters.number_of_players):
-        hand = tuple(sorted(random.sample(remaining_cards, number_of_tricks)))
+        hand: tuple[Card, ...] = tuple(
+            sorted(random.sample(remaining_cards, number_of_tricks))
+        )
         for card in hand:
             remaining_cards.remove(card)
         hands.append(hand)

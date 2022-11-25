@@ -6,19 +6,20 @@ from crew_types import CardDistribution, Player
 from crew_utils import (
     DEFAULT_PARAMETERS,
     THREE_PLAYER_PARAMETERS,
+    CrewGameParameters,
     CrewGameState,
     Task,
     deal_cards,
 )
 
 
-def example_game(number: int | None):
+def example_game(number: int | None) -> CrewGame:
     description: str = ""
     hands: CardDistribution
     active_player: Player | None = None
     tasks: list[Task]
     special_tasks: list[SpecialTask] = []
-    parameters = DEFAULT_PARAMETERS
+    parameters: CrewGameParameters = DEFAULT_PARAMETERS
 
     match number:
         case 1:
@@ -176,5 +177,5 @@ def example_game(number: int | None):
     )
 
 
-def random_game():
+def random_game() -> CrewGame:
     return example_game(None)

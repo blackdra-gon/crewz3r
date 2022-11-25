@@ -1,9 +1,9 @@
-from z3 import And, Not, Or
+from z3 import And, BoolRef, Not, Or
 
 
 # returns a Z3 formular which evaluates to true if exactly one of given bools
 # is true
-def Exactly_one(list_of_bools):
+def Exactly_one(list_of_bools: list[BoolRef]) -> BoolRef:
     return Or(
         [
             And(

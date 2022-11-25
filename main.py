@@ -5,7 +5,7 @@ from crew_game import CrewGame
 from crew_print import print_initial_game_state, print_solution
 
 
-def run_game(game: CrewGame):
+def run_game(game: CrewGame) -> None:
     print_initial_game_state(game.parameters, game.initial_state)
 
     start_time: float = time.time()
@@ -21,7 +21,7 @@ def run_game(game: CrewGame):
         print("No solution exists.")
 
 
-def main():
+def main() -> None:
     # run_game(example_game(1))
     # run_game(example_game(2))
     run_game(example_game(3))

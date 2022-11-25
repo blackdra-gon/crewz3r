@@ -63,16 +63,16 @@ table_content_widths: dict[str, int] = {
 }
 
 
-def card_string(card: Card):
-    width = table_element_widths["colour_name"]
+def card_string(card: Card) -> str:
+    width: int = table_element_widths["colour_name"]
     return (
         f"({COLOUR_NAMES[card[0]]:{width}} "
         f'{card[1]:>{table_element_widths["card_value"]}})'
     )
 
 
-def print_game_parameters(parameters: CrewGameParameters):
-    p = (
+def print_game_parameters(parameters: CrewGameParameters) -> None:
+    p: str = (
         f"{parameters.number_of_players} players, "
         f"{parameters.number_of_colours} colours "
         f"with maximum value of {parameters.max_card_value}, "
@@ -85,15 +85,15 @@ def print_game_parameters(parameters: CrewGameParameters):
     print(p)
 
 
-def print_card_distribution(cards: CardDistribution):
+def print_card_distribution(cards: CardDistribution) -> None:
     for i, cs in enumerate(cards):
         print(f'{table_elements["player_prefix"]}' f"{i + 1}:", end=" ")
         print(", ".join([card_string(c) for c in cs]))
 
 
-def print_regular_tasks(tasks: list[Task]):
-    ordered_tasks = []
-    last_task = None
+def print_regular_tasks(tasks: list[Task]) -> None:
+    ordered_tasks: list[Task] = []
+    last_task: Task | None = None
     for task in tasks:
         print(
             f'Task for {table_elements["player_prefix"]}'
@@ -130,12 +130,14 @@ def print_regular_tasks(tasks: list[Task]):
         )
 
 
-def print_special_tasks(tasks: list[SpecialTask]):
+def print_special_tasks(tasks: list[SpecialTask]) -> None:
     for task in tasks:
         print(f"Special task: {task.description}")
 
 
-def print_initial_game_state(parameters: CrewGameParameters, game_state: CrewGameState):
+def print_initial_game_state(
+    parameters: CrewGameParameters, game_state: CrewGameState
+) -> None:
     print("\nGame parameters:")
     print_game_parameters(parameters)
     if not game_state.hands:
@@ -153,10 +155,14 @@ def print_table(
     content_widths: list[int],
     column_separator: str,
 ) -> None:
-    assert len(headers) == len(content_widths)
-    assert all([len(line) == len(headers) for line in lines])
+    if len(headers) != len(content_widths):
+        raise ValueError("Length mismatch between headers and content_widths.")
+    if not all([len(line) == len(headers) for line in lines]):
+        raise ValueError("Length mismatch between headers and lines.")
 
-    column_widths: list[int] = list(map(max, zip(map(len, headers), content_widths)))
+    column_widths: list[int] = list(
+        map(max, zip(map(len, headers), content_widths))  # type: ignore
+    )
     total_width: int = sum(column_widths, (len(headers) - 1) * len(column_separator))
 
     print()
@@ -175,7 +181,7 @@ def print_table(
     print()
 
 
-def print_solution(solution: CrewGameSolution):
+def print_solution(solution: CrewGameSolution) -> None:
     task_cards: list[Card] = [
         t.card for t in solution.initial_state.tasks if type(t) == Task
     ]
@@ -191,14 +197,15 @@ def print_solution(solution: CrewGameSolution):
             COLOUR_NAMES[ac],
         ]
         for i, card in enumerate(trick.played_cards):
-            start_mark, task_mark = "", ""
+            start_mark: str = ""
+            task_mark: str = ""
             if table_formatting_rules["mark_trick_start"] and i + 1 == sp:
                 start_mark = table_elements["trick_start_marker"]
             if card in task_cards:
                 task_mark = table_elements["task_completion_marker"]
                 task_completed = True
-            tm_width = table_element_widths["trick_start_marker"]
-            cm_width = table_element_widths["task_completion_marker"]
+            tm_width: int = table_element_widths["trick_start_marker"]
+            cm_width: int = table_element_widths["task_completion_marker"]
             table_line.append(
                 f"{start_mark:{tm_width}} "
                 f"{card_string(card)} "
@@ -214,7 +221,7 @@ def print_solution(solution: CrewGameSolution):
         table_lines.append(table_line)
 
     number_of_players = len(solution.tricks[0].played_cards)
-    headers = (
+    headers: list[str] = (
         [table_column_headers["trick_number"]]
         + [table_column_headers["starting_player"]]
         + [table_column_headers["active_colour"]]
@@ -225,7 +232,7 @@ def print_solution(solution: CrewGameSolution):
         + [table_column_headers["winning_player"]]
         + [table_column_headers["task_completion"]]
     )
-    widths = (
+    widths: list[int] = (
         [len(str(len(solution.tricks)))]
         + [table_content_widths["starting_player"]]
         + [table_content_widths["active_colour"]]
