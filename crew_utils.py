@@ -1,5 +1,6 @@
 import random
 from dataclasses import dataclass, field
+from itertools import permutations
 
 from crew_tasks import SpecialTask, Task
 from crew_types import Card, CardDistribution, Colour, Hand, Player
@@ -88,3 +89,16 @@ def deal_cards(parameters: CrewGameParameters) -> CardDistribution:
             remaining_cards.remove(card)
         hands.append(hand)
     return tuple(hands)
+
+
+def all_task_distributions(
+    hands: CardDistribution, tasks: list[Task], parameter: CrewGameParameters
+):
+    def task_distributions(number_of_players: int, number_of_tasks: int):
+        base_list = [(i % number_of_players) + 1 for i in range(number_of_tasks)]
+        yield from dict.fromkeys(permutations(base_list))
+
+    for k, d in enumerate(task_distributions(parameter.number_of_players, len(tasks))):
+        for j, task in enumerate(tasks):
+            task.player = d[j]
+        yield CrewGameState(hands, None, tasks)

@@ -11,7 +11,7 @@ class Task:
     def __init__(
         self,
         card: Card,
-        player: Player,
+        player: Player | None = None,
         order_constraint: int = 0,
         relative_constraint: bool = False,
     ) -> None:

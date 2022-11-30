@@ -116,7 +116,7 @@ def print_regular_tasks(tasks: list[Task]) -> None:
                 )
         else:
             # The game is using absolute constraints
-            for i, o_task in enumerate(ordered_tasks[:-1]):
+            for i, o_task in enumerate(ordered_tasks):
                 print(
                     "Task order constraint (absolute): "
                     f"{card_string(o_task.card)} must be number {i + 1} "
