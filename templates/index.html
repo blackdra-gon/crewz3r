@@ -1,33 +1,37 @@
+<!-- prettier-ignore -->
 <!DOCTYPE html>
 <html>
-<head>
-    <meta charset="UTF-8">
-    <link rel="stylesheet" href="/static/styles/main.css">
-    <script type="text/javascript" src="/static/scripts/socket.io.min.js"
-            defer></script>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="/static/styles/main.css" />
+    <script
+      type="text/javascript"
+      src="/static/scripts/socket.io.min.js"
+      defer
+    ></script>
     <script src="/static/scripts/main.js" defer></script>
-</head>
-<body>
-<main>
-    <div id="connection-banner">
+  </head>
+  <body>
+    <main>
+      <div id="connection-banner">
         <span class="not-connected">Not connected</span>
         <span class="connected">Connected</span>
-    </div>
-    <!-- Start page -->
-    <div class="start">
+      </div>
+      <!-- Start page -->
+      <div class="start">
         <p><span data-user-count>0</span> in der Lobby</p>
         <ul id="users"></ul>
         <form id="name">
-            <input type="text" name="name">
-            <button type="submit">Name ändern</button>
+          <input type="text" name="name" />
+          <button type="submit">Name ändern</button>
         </form>
         <button type="button" id="start_game">Spiel starten</button>
-    </div>
-    <!-- Game page -->
-    <div class="in_game">
+      </div>
+      <!-- Game page -->
+      <div class="in_game">
         <button type="button" id="end_game">Spiel beenden</button>
         <form id="card"></form>
-    </div>
-</main>
-</body>
+      </div>
+    </main>
+  </body>
 </html>

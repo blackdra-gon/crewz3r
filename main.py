@@ -1,14 +1,33 @@
-from crew_example_games import example_game, random_game
+import time
+
+from crew_example_games import example_game
 from crew_game import CrewGame
+from crew_print import print_initial_game_state, print_solution
 
 
-def main():
-    game = example_game(4)
-    # game = random_game()
+def run_game(game: CrewGame) -> None:
+    print_initial_game_state(game.parameters, game.initial_state)
 
-    game.check()
-    game.print_solution()
+    start_time: float = time.time()
+
+    game.solve()
+
+    duration: float = time.time() - start_time
+    print(f"\nSolving took {int(duration // 60)}m {duration % 60:.1f}s.")
+
+    if game.has_solution():
+        print_solution(game.get_solution())
+    else:
+        print("No solution exists.")
 
 
-if __name__ == '__main__':
+def main() -> None:
+    # run_game(example_game(1))
+    # run_game(example_game(2))
+    run_game(example_game(3))
+    # run_game(example_game(4))
+    # run_game(random_game())
+
+
+if __name__ == "__main__":
     main()

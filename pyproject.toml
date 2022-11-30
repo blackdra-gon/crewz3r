@@ -1,0 +1,41 @@
+[tool.poetry]
+name = "crew-logic"
+version = "0.1.0"
+description = "Calculate solutions to the cooperative card game 'The Crew'"
+authors = [
+    "Benjamin Hennies <benjaminhennies@posteo.de>",
+    "Gregor <apriljunge@gmail.com>",
+    "iTeaMaster <51019451+iTeaMaster@users.noreply.github.com>",
+]
+readme = "README.md"
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Environment :: Web Environment",
+    "Framework :: Flake8",
+    "Framework :: Flask",
+    "Intended Audience :: Other Audience",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: JavaScript",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Games/Entertainment :: Board Games",
+    "Typing :: Typed",
+]
+
+packages = [{ include = "crew_logic" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+z3-solver = "^4.11.2.0"
+Flask = "^2.2.2"
+Flask-SocketIO = "^5.3.2"
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^2.20.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,70 +1,90 @@
 import random
 from dataclasses import dataclass, field
-from typing import TypeAlias
 
-# Type alias for cards: The first integer represents the color (or suit),
-# the second determines the card value.
-Card: TypeAlias = tuple[int, int]
+from crew_tasks import SpecialTask, Task
+from crew_types import Card, CardDistribution, Colour, Hand, Player
 
-
-# Class representing a task assigned to a player
-# If order_constraint == 0, there is no order constraint.
-# If relative_constraint == False, we have an absolute order constraint.
-# In this case -1 means: The task has to be fulfilled at last.
-class Task:
-
-    def __init__(self, card: Card, player: int, order_constraint=0, relative_constraint=False):
-        if relative_constraint:
-            assert order_constraint in (0, 1, 2, 3, 4)
-        else:
-            assert order_constraint in (-1, 0, 1, 2, 3, 4, 5)
-        self.card = card
-        self.player = player
-        self.order_constraint: int = order_constraint
-        self.relative_constraint: bool = relative_constraint
+# Internal constant representing the colour of trump cards.
+TRUMP_COLOUR: Colour = -1
 
 
-class SpecialTask:
-    pass
-
-
-class NoTricksWithValue(SpecialTask):
-
-    def __init__(self, forbidden_value):
-        self.forbidden_value = forbidden_value
-
-
-
-def deal_cards(number_of_players: int,
-               number_of_colours: int,
-               max_card_value: int,
-               max_trump_value: int) -> list[list[Card]]:
-    trump_colour = -1
-    number_of_cards = number_of_colours * max_card_value + max_trump_value
-    number_of_tricks = number_of_cards // number_of_players
-    assert number_of_tricks * number_of_players == number_of_cards
-    remaining_cards = [(color, value)
-                       for color in range(number_of_colours)
-                       for value in range(1, max_card_value + 1)] + \
-                      [(trump_colour, value)
-                       for value in range(1, max_trump_value + 1)
-                       if max_trump_value > 0]
-    hands = []
-    for i in range(number_of_players):
-        hand = sorted(random.sample(remaining_cards, number_of_tricks))
-        for card in hand:
-            remaining_cards.remove(card)
-        hands.append(hand)
-    return hands
-
-# If the first starting player shall be determined by the highest trump card, active_player should be set to None
 @dataclass
-class CrewGameState(object):
-    hands: list[list[Card]]
-    tasks: list[Task]
-    active_player: int = 0
+class CrewGameParameters:
+    """The base parameters needed to initialize a crew game.
+
+    Setting max_trump_value to 0 disables trump cards."""
+
+    number_of_players: int
+    number_of_colours: int
+    max_card_value: int
+    max_trump_value: int
+
+
+FOUR_PLAYER_PARAMETERS: CrewGameParameters = CrewGameParameters(4, 4, 9, 4)
+THREE_PLAYER_PARAMETERS: CrewGameParameters = CrewGameParameters(3, 3, 9, 3)
+FIVE_PLAYER_PARAMETERS: CrewGameParameters = CrewGameParameters(5, 4, 9, 4)
+DEFAULT_PARAMETERS: CrewGameParameters = FOUR_PLAYER_PARAMETERS
+
+
+@dataclass
+class CrewGameState:
+    """The card distribution, tasks and active player of a crew game.
+
+    When active_player is set to None, the first starting player is
+    determined by the highest trump card."""
+
+    hands: CardDistribution | None = None
+    active_player: Player | None = None
+    tasks: list[Task] = field(default_factory=list)
     special_tasks: list[SpecialTask] = field(default_factory=list)
 
 
-if __name__ == '__main__':
-    print(deal_cards(number_of_players=3, number_of_colours=3, max_card_value=9, max_trump_value=3))
+@dataclass
+class CrewGameTrick:
+    """A single trick within a game."""
+
+    played_cards: list[Card]
+    active_colour: Colour
+    starting_player: Player
+    winning_player: Player
+
+
+@dataclass
+class CrewGameSolution:
+    """A sequence of tricks that fulfill all tasks and requirements of a game
+    instance."""
+
+    initial_state: CrewGameState
+    tricks: list[CrewGameTrick]
+
+
+def get_deck(parameters: CrewGameParameters) -> list[Card]:
+    return [
+        (color, value)
+        for color in range(parameters.number_of_colours)
+        for value in range(1, parameters.max_card_value + 1)
+    ] + [
+        (TRUMP_COLOUR, value)
+        for value in range(1, parameters.max_trump_value + 1)
+        if parameters.max_trump_value > 0
+    ]
+
+
+def deal_cards(parameters: CrewGameParameters) -> CardDistribution:
+    number_of_cards: int = (
+        parameters.number_of_colours * parameters.max_card_value
+        + parameters.max_trump_value
+    )
+    number_of_tricks: int = number_of_cards // parameters.number_of_players
+    if not number_of_tricks * parameters.number_of_players == number_of_cards:
+        raise ValueError("Invalid parameters.")
+    remaining_cards: list[Card] = get_deck(parameters)
+    hands: list[Hand] = []
+    for i in range(parameters.number_of_players):
+        hand: tuple[Card, ...] = tuple(
+            sorted(random.sample(remaining_cards, number_of_tricks))
+        )
+        for card in hand:
+            remaining_cards.remove(card)
+        hands.append(hand)
+    return tuple(hands)
