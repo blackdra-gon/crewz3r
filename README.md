@@ -1,11 +1,12 @@
 # Crew Logic
 
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg)](https://github.com/prettier/prettier)
+[![license](https://img.shields.io/github/license/bhennies/Crew_Logic)](https://github.com/bhennies/Crew_Logic/blob/master/COPYING)
 
 Calculate solutions to the cooperative card game _The Crew_ using
-the [Z3 Theorem Prover ](https://github.com/Z3Prover/z3/).
+the [Z3 Theorem Prover](https://github.com/Z3Prover/z3/).
 
 ## Webserver
 
@@ -16,7 +17,7 @@ network.
 ## Dependencies
 
 Dependencies are managed through [poetry](https://python-poetry.org).
-After cloning the repository, run `poetry install` to install all dependencies.
+After installing poetry and cloning the repository, run `poetry install` to install all dependencies.
 
 ## Code style
 
@@ -31,10 +32,18 @@ quality assurance tools automatically:
 - [flake8](https://github.com/PyCQA/flake8)
 - [prettier](https://github.com/pre-commit/mirrors-prettier)
 
-The [MyPy](https://github.com/pre-commit/mirrors-mypy/)
-type checker can be run manually with:
+To run the [MyPy](https://github.com/pre-commit/mirrors-mypy/)
+type checker manually:
 
-`pre-commit run -a --hook-stage manual mypy`.
+```
+pre-commit run -a --hook-stage manual mypy
+```
+
+To run the other pre-commit hooks manually:
+
+```
+pre-commit run -a
+```
 
 This project uses the [Black](https://github.com/psf/black) auto-formatter to enforce a
 consistent code style. For editor/IDE integration, see
