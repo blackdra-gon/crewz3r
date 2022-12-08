@@ -155,6 +155,54 @@ def example_game(number: int | None) -> CrewGame:
                 Task((1, 8), 2, order_constraint=2, relative_constraint=True),
             ]
             parameters = THREE_PLAYER_PARAMETERS
+        case 42:
+            hands = (
+                (
+                    (0, 2),
+                    (0, 4),
+                    (0, 5),
+                    (-1, 2),
+                    (1, 2),
+                    (2, 1),
+                    (2, 2),
+                    (2, 3),
+                    (2, 7),
+                    (2, 8),
+                ),
+                (
+                    (0, 9),
+                    (0, 6),
+                    (0, 1),
+                    (-1, 1),
+                    (1, 3),
+                    (1, 6),
+                    (1, 7),
+                    (1, 8),
+                    (1, 9),
+                    (2, 9),
+                ),
+                (
+                    (0, 3),
+                    (0, 7),
+                    (0, 8),
+                    (-1, 3),
+                    (1, 1),
+                    (1, 4),
+                    (1, 5),
+                    (2, 4),
+                    (2, 5),
+                    (2, 6),
+                ),
+            )
+            tasks = [
+                Task((1, 1)),
+                Task((0, 9)),
+                Task((2, 3), order_constraint=1),
+                Task((1, 5), order_constraint=2),
+                Task((1, 6), order_constraint=3),
+                Task((1, 2)),
+            ]
+            parameters = THREE_PLAYER_PARAMETERS
         case _:
             if number:
                 description = f"There is no example game number {number}."
@@ -179,19 +227,3 @@ def example_game(number: int | None) -> CrewGame:
 
 def random_game() -> CrewGame:
     return example_game(None)
-
-
-hands = (
-    ((0, 2), (0, 4), (0, 5), (-1, 2), (1, 2), (2, 1), (2, 2), (2, 3), (2, 7), (2, 8)),
-    ((0, 9), (0, 6), (0, 1), (-1, 1), (1, 3), (1, 6), (1, 7), (1, 8), (1, 9), (2, 9)),
-    ((0, 3), (0, 7), (0, 8), (-1, 3), (1, 1), (1, 4), (1, 5), (2, 4), (2, 5), (2, 6)),
-)
-
-tasks = [
-    Task((1, 1), None),
-    Task((0, 9)),
-    Task((2, 3), order_constraint=1),
-    Task((1, 5), order_constraint=2),
-    Task((1, 6), order_constraint=3),
-    Task((1, 2)),
-]

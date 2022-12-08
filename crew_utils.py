@@ -1,4 +1,5 @@
 import random
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from itertools import permutations
 
@@ -93,8 +94,10 @@ def deal_cards(parameters: CrewGameParameters) -> CardDistribution:
 
 def all_task_distributions(
     hands: CardDistribution, tasks: list[Task], parameter: CrewGameParameters
-):
-    def task_distributions(number_of_players: int, number_of_tasks: int):
+) -> Iterator[CrewGameState]:
+    def task_distributions(
+        number_of_players: int, number_of_tasks: int
+    ) -> Iterator[list[int]]:
         base_list = [(i % number_of_players) + 1 for i in range(number_of_tasks)]
         yield from dict.fromkeys(permutations(base_list))
 
