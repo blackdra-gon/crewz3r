@@ -28,12 +28,16 @@ classifiers = [
 packages = [{ include = "crew_logic" }]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.11"
+
 z3-solver = "^4.11.2.0"
 Flask = "^2.2.2"
 Flask-SocketIO = "^5.3.2"
 
 [tool.poetry.group.dev.dependencies]
+pytest = "^7.2.0"
+pytest-cov = "^3.0.0"
+hypothesis = "^4.57.1"
 pre-commit = "^2.20.0"
 
 [build-system]
