@@ -1,7 +1,12 @@
 import random
 
 from crew_game import CrewGame
-from crew_tasks import SpecialTask
+from crew_tasks import (
+    AssignTrickToPlayer,
+    NullGame,
+    SpecialTask,
+    WinTricksWithSpecificValues,
+)
 from crew_types import CardDistribution, Player
 from crew_utils import (
     DEFAULT_PARAMETERS,
@@ -17,7 +22,7 @@ def example_game(number: int | None) -> CrewGame:
     description: str = ""
     hands: CardDistribution
     active_player: Player | None = None
-    tasks: list[Task]
+    tasks: list[Task] = []
     special_tasks: list[SpecialTask] = []
     parameters: CrewGameParameters = DEFAULT_PARAMETERS
 
@@ -203,6 +208,165 @@ def example_game(number: int | None) -> CrewGame:
                 Task((1, 2)),
             ]
             parameters = THREE_PLAYER_PARAMETERS
+        case 5:
+            description = "Test assigning tricks to players"
+            hands = (
+                (
+                    (0, 3),
+                    (0, 4),
+                    (0, 6),
+                    (0, 9),
+                    (1, 2),
+                    (1, 4),
+                    (2, 6),
+                    (3, 1),
+                    (3, 4),
+                    (3, 6),
+                ),
+                (
+                    (0, 5),
+                    (1, 1),
+                    (1, 3),
+                    (1, 5),
+                    (2, 1),
+                    (2, 3),
+                    (2, 5),
+                    (2, 7),
+                    (3, 3),
+                    (3, 8),
+                ),
+                (
+                    (-1, 1),
+                    (-1, 2),
+                    (0, 1),
+                    (0, 2),
+                    (1, 6),
+                    (1, 7),
+                    (1, 8),
+                    (2, 2),
+                    (2, 8),
+                    (3, 5),
+                ),
+                (
+                    (-1, 3),
+                    (-1, 4),
+                    (0, 7),
+                    (0, 8),
+                    (1, 9),
+                    (2, 4),
+                    (2, 9),
+                    (3, 2),
+                    (3, 7),
+                    (3, 9),
+                ),
+            )
+            special_tasks = [AssignTrickToPlayer(1, 2), AssignTrickToPlayer(2, 3)]
+        case 6:
+            description = "Test Nullgame"
+            hands = (
+                (
+                    (-1, 1),
+                    (0, 2),
+                    (0, 7),
+                    (1, 5),
+                    (1, 9),
+                    (2, 3),
+                    (2, 5),
+                    (3, 1),
+                    (3, 3),
+                    (3, 4),
+                ),
+                (
+                    (0, 1),
+                    (0, 3),
+                    (0, 4),
+                    (0, 8),
+                    (1, 2),
+                    (1, 3),
+                    (1, 8),
+                    (2, 1),
+                    (2, 2),
+                    (2, 7),
+                ),
+                (
+                    (-1, 3),
+                    (0, 6),
+                    (0, 9),
+                    (1, 1),
+                    (2, 8),
+                    (3, 2),
+                    (3, 6),
+                    (3, 7),
+                    (3, 8),
+                    (3, 9),
+                ),
+                (
+                    (-1, 2),
+                    (-1, 4),
+                    (0, 5),
+                    (1, 4),
+                    (1, 6),
+                    (1, 7),
+                    (2, 4),
+                    (2, 6),
+                    (2, 9),
+                    (3, 5),
+                ),
+            )
+            special_tasks.append(NullGame(1))
+        case 7:
+            description = "Test one trick won with a 1"
+            hands = (
+                (
+                    (-1, 1),
+                    (0, 2),
+                    (0, 7),
+                    (1, 5),
+                    (1, 9),
+                    (2, 3),
+                    (2, 5),
+                    (3, 1),
+                    (3, 3),
+                    (3, 4),
+                ),
+                (
+                    (0, 1),
+                    (0, 3),
+                    (0, 4),
+                    (0, 8),
+                    (1, 2),
+                    (1, 3),
+                    (1, 8),
+                    (2, 1),
+                    (2, 2),
+                    (2, 7),
+                ),
+                (
+                    (-1, 3),
+                    (0, 6),
+                    (0, 9),
+                    (1, 1),
+                    (2, 8),
+                    (3, 2),
+                    (3, 6),
+                    (3, 7),
+                    (3, 8),
+                    (3, 9),
+                ),
+                (
+                    (-1, 2),
+                    (-1, 4),
+                    (0, 5),
+                    (1, 4),
+                    (1, 6),
+                    (1, 7),
+                    (2, 4),
+                    (2, 6),
+                    (2, 9),
+                    (3, 5),
+                ),
+            )
+            special_tasks.append(WinTricksWithSpecificValues(1))
         case _:
             if number:
                 description = f"There is no example game number {number}."

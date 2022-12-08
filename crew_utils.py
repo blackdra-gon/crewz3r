@@ -105,3 +105,19 @@ def all_task_distributions(
         for j, task in enumerate(tasks):
             task.player = d[j]
         yield CrewGameState(hands, None, tasks)
+
+
+def print_random_card_distribution(number_of_players: int):
+    if number_of_players == 3:
+        hands = deal_cards(THREE_PLAYER_PARAMETERS)
+    elif number_of_players == 4:
+        hands = deal_cards(FOUR_PLAYER_PARAMETERS)
+    elif number_of_players == 5:
+        hands = deal_cards(FIVE_PLAYER_PARAMETERS)
+    else:
+        raise ValueError
+    print(hands)
+
+
+if __name__ == "__main__":
+    print_random_card_distribution(4)

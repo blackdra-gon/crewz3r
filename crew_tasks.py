@@ -36,3 +36,27 @@ class NoTricksWithValueTask(SpecialTask):
     def __init__(self, forbidden_value: int) -> None:
         super().__init__(f"No tricks may be won with cards of value {forbidden_value}.")
         self.forbidden_value: int = forbidden_value
+
+
+class AssignTrickToPlayer(SpecialTask):
+    def __init__(self, player: Player, trick_number: int):
+        super().__init__(f"Trick number {trick_number} must be won by player {player}")
+        self.player = player
+        self.trick_number = trick_number
+        # Idea: Adjust the print such that it marks the tricks
+
+
+class NullGame(SpecialTask):
+    def __init__(self, player: Player):
+        super().__init__(f"Player {player} must not win any tricks")
+        self.player = player
+
+
+class WinTricksWithSpecificValues(SpecialTask):
+    def __init__(self, value: int, number: int = 1):
+        super().__init__(
+            f"At least {number} tricks have to be won with a (non-trump) card of"
+            + f"value {value}. Warning: Not Yet implemented correctly"
+        )
+        self.value = value
+        self.number = number

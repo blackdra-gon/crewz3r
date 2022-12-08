@@ -14,7 +14,13 @@ from z3 import (
     sat,
 )
 
-from crew_tasks import Task
+from crew_tasks import (
+    AssignTrickToPlayer,
+    NoTricksWithValueTask,
+    NullGame,
+    Task,
+    WinTricksWithSpecificValues,
+)
 from crew_types import Card, CardDistribution, Colour, Player
 from crew_utils import (
     DEFAULT_PARAMETERS,
@@ -347,6 +353,8 @@ class CrewGame(CrewGameBase):
 
         super().__init__(parameters, initial_state)
 
+        # Convert the task from a list[Task] to the formulas needed by the solver
+        # First: standard task and order constraints
         ordered_tasks: list[Task] = []
         last_task: Task | None = None
         for task in initial_state.tasks:
@@ -367,6 +375,23 @@ class CrewGame(CrewGameBase):
                 )
         if last_task:
             self.add_task_constraint_absolute_order_last(last_task.card)
+        # Second: special tasks:
+        for special_task in initial_state.special_tasks:
+            if type(special_task) is NoTricksWithValueTask:
+                self.add_special_task_no_tricks_value(special_task.forbidden_value)
+            elif type(special_task) is AssignTrickToPlayer:
+                self.add_special_task_assign_trick(
+                    special_task.player, special_task.trick_number
+                )
+            elif type(special_task) is NullGame:
+                for j in range(1, self.NUMBER_OF_TRICKS + 1):
+                    self.add_special_task_forbid_trick(special_task.player, j)
+            elif type(special_task) is WinTricksWithSpecificValues:
+                self.add_special_task_tricks_with_specific_value(
+                    special_task.value, special_task.number
+                )
+            else:
+                raise NotImplementedError
 
     def add_card_task(self, tasked_player: int, card: Card | None = None) -> None:
         task_card: Card
@@ -457,6 +482,7 @@ class CrewGame(CrewGameBase):
             raise ValueError("Value out of bounds.")
 
         # No trick may be won with a card of the given value.
+        # This implementation only works for the highest value the colours
         for j in range(self.NUMBER_OF_TRICKS):
             for i in range(self.parameters.number_of_players):
                 self.solver.add(
@@ -465,3 +491,26 @@ class CrewGame(CrewGameBase):
                         self.cards[j][i][0] != self.active_colours[j],
                     )
                 )
+
+    def add_special_task_assign_trick(self, player: Player, trick_number: int):
+        self.solver.add(self.trick_winners[trick_number - 1] == player)
+
+    def add_special_task_forbid_trick(self, player: Player, trick_number: int):
+        self.solver.add(self.trick_winners[trick_number - 1] != player)
+
+    # A number of tricks has to be won with a specific value. Trump cards do not count.
+    def add_special_task_tricks_with_specific_value(self, value: int, number: int = 1):
+        #
+        self.solver.add(
+            Or(
+                [
+                    And(
+                        self.cards[j][k][1] == value,
+                        self.trick_winners[j] == k,
+                        self.cards[j][k][0] != TRUMP_COLOUR,
+                    )
+                    for k in range(self.parameters.number_of_players)
+                    for j in range(self.NUMBER_OF_TRICKS)
+                ]
+            )
+        )
