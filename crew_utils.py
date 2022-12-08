@@ -97,7 +97,7 @@ def all_task_distributions(
 ) -> Iterator[CrewGameState]:
     def task_distributions(
         number_of_players: int, number_of_tasks: int
-    ) -> Iterator[list[int]]:
+    ) -> Iterator[tuple[int, ...]]:
         base_list = [(i % number_of_players) + 1 for i in range(number_of_tasks)]
         yield from dict.fromkeys(permutations(base_list))
 
