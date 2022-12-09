@@ -1,25 +1,68 @@
 import random
+from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from itertools import permutations
+from typing import Any
 
-from crew_tasks import SpecialTask, Task
-from crew_types import Card, CardDistribution, Colour, Hand, Player
+from crew_logic.crew_tasks import SpecialTask, Task
+from crew_logic.crew_types import Card, CardDistribution, Colour, Hand, Player
 
 # Internal constant representing the colour of trump cards.
 TRUMP_COLOUR: Colour = -1
 
 
+# https://docs.python.org/3/howto/descriptor.html#validator-class
+class Validator(ABC):
+    """Abstract descriptor class for validating field values."""
+
+    def __set_name__(self, owner: type, name: str) -> None:
+        self.private_name = "_" + name
+
+    def __get__(self, obj: Any, objtype: type | None = None) -> Any:
+        return getattr(obj, self.private_name)
+
+    def __set__(self, obj: Any, value: Any) -> None:
+        self.validate(value)
+        setattr(obj, self.private_name, value)
+
+    @abstractmethod
+    def validate(self, value: Any) -> None:
+        raise NotImplementedError
+
+
+@dataclass(kw_only=True)
+class IntegerV(Validator):
+    """Descriptor for integers with optional min and max value constraints."""
+
+    min_value: int | None = None
+    max_value: int | None = None
+
+    def validate(self, value: int) -> None:
+        if self.min_value is not None and value < self.min_value:
+            raise ValueError(f"Expected {value} to be at least {self.min_value}")
+        if self.max_value is not None and value > self.max_value:
+            raise ValueError(f"Expected {value} to be no more than {self.max_value}")
+
+
+
 @dataclass
-class CrewGameParameters:
+class CrewGameParametersData:
+    number_of_players: int | IntegerV
+    number_of_colours: int | IntegerV
+    max_card_value: int | IntegerV
+    max_trump_value: int | IntegerV
+
+
+class CrewGameParameters(CrewGameParametersData):
     """The base parameters needed to initialize a crew game.
 
     Setting max_trump_value to 0 disables trump cards."""
 
-    number_of_players: int
-    number_of_colours: int
-    max_card_value: int
-    max_trump_value: int
+    number_of_players = IntegerV(min_value=2)
+    number_of_colours = IntegerV(min_value=1)
+    max_card_value = IntegerV(min_value=1)
+    max_trump_value = IntegerV(min_value=0)
 
 
 FOUR_PLAYER_PARAMETERS: CrewGameParameters = CrewGameParameters(4, 4, 9, 4)

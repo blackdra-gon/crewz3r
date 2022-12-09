@@ -1,19 +1,5 @@
 import random
 
-from z3 import (
-    And,
-    ArithRef,
-    CheckSatResult,
-    Distinct,
-    Implies,
-    Int,
-    IntVector,
-    ModelRef,
-    Or,
-    Solver,
-    sat,
-)
-
 from crew_tasks import Task
 from crew_types import Card, CardDistribution, Colour, Player
 from crew_utils import (
@@ -27,6 +13,19 @@ from crew_utils import (
     CrewGameState,
     CrewGameTrick,
     deal_cards,
+)
+from z3 import (
+    And,
+    ArithRef,
+    CheckSatResult,
+    Distinct,
+    Implies,
+    Int,
+    IntVector,
+    ModelRef,
+    Or,
+    Solver,
+    sat,
 )
 
 
@@ -277,9 +276,9 @@ class CrewGameBase:
 
     def _valid_card(self, card: Card) -> bool:
         if card[0] == TRUMP_COLOUR:
-            return 0 < card[1] <= self.parameters.max_trump_value
+            return 0 < card[1] <= self.parameters.max_trump_value  # type: ignore
         if 0 <= card[0] < self.parameters.number_of_colours:
-            return 0 < card[1] <= self.parameters.max_card_value
+            return 0 < card[1] <= self.parameters.max_card_value  # type: ignore
         return False
 
     def solve(self) -> None:
@@ -356,7 +355,7 @@ class CrewGame(CrewGameBase):
             elif task.order_constraint == -1:
                 last_task = task
         if len(ordered_tasks) > 0:
-            ordered_tasks.sort(key=lambda o_task: o_task.order_constraint)
+            ordered_tasks.sort(key=lambda task: task.order_constraint)  # type: ignore
             if ordered_tasks[0].relative_constraint:
                 self.add_task_constraint_relative_order(
                     [task.card for task in ordered_tasks]

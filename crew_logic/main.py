@@ -3,7 +3,6 @@ import time
 from crew_example_games import example_game
 from crew_game import CrewGame
 from crew_print import print_initial_game_state, print_solution
-from crew_utils import all_task_distributions
 
 
 def run_game(game: CrewGame) -> None:
@@ -25,14 +24,14 @@ def run_game(game: CrewGame) -> None:
 def main() -> None:
     # run_game(example_game(1))
     # run_game(example_game(2))
-    # run_game(example_game(3))
+    run_game(example_game(3))
     # run_game(example_game(4))
     # run_game(random_game())
-    game = example_game(42)
-    for game_state in all_task_distributions(
-        game.player_hands, game.initial_state.tasks, game.parameters
-    ):
-        run_game(CrewGame(game.parameters, game_state))
+    # game = example_game(42)
+    # for game_state in all_task_distributions(
+    #     game.player_hands, game.initial_state.tasks, game.parameters
+    # ):
+    #     run_game(CrewGame(game.parameters, game_state))
 
 
 if __name__ == "__main__":
