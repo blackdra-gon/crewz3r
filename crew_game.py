@@ -500,17 +500,24 @@ class CrewGame(CrewGameBase):
 
     # A number of tricks has to be won with a specific value. Trump cards do not count.
     def add_special_task_tricks_with_specific_value(self, value: int, number: int = 1):
-        #
+        trick_number_helper_variable = [Int(f"helper_{i}") for i in range(number)]
+        self.solver.add(Distinct(trick_number_helper_variable))
         self.solver.add(
-            Or(
+            And(
                 [
-                    And(
-                        self.cards[j][k][1] == value,
-                        self.trick_winners[j] == k,
-                        self.cards[j][k][0] != TRUMP_COLOUR,
+                    Or(
+                        [
+                            And(
+                                self.cards[j][k][1] == value,
+                                self.trick_winners[j] == k + 1,
+                                self.cards[j][k][0] != TRUMP_COLOUR,
+                                trick_number_helper_variable[i] == j,
+                            )
+                            for k in range(self.parameters.number_of_players)
+                            for j in range(self.NUMBER_OF_TRICKS)
+                        ]
                     )
-                    for k in range(self.parameters.number_of_players)
-                    for j in range(self.NUMBER_OF_TRICKS)
+                    for i in range(number)
                 ]
             )
         )

@@ -366,7 +366,8 @@ def example_game(number: int | None) -> CrewGame:
                     (3, 5),
                 ),
             )
-            special_tasks.append(WinTricksWithSpecificValues(1))
+            special_tasks.append(WinTricksWithSpecificValues(1, 4))
+            # for 1 to 3 ones, there exists a solution, for 4 not
         case _:
             if number:
                 description = f"There is no example game number {number}."

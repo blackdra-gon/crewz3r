@@ -55,8 +55,8 @@ class NullGame(SpecialTask):
 class WinTricksWithSpecificValues(SpecialTask):
     def __init__(self, value: int, number: int = 1):
         super().__init__(
-            f"At least {number} tricks have to be won with a (non-trump) card of"
-            + f"value {value}. Warning: Not Yet implemented correctly"
+            f"At least {number} tricks have to be won with a (non-trump) card of "
+            + f"value {value}."
         )
         self.value = value
         self.number = number
