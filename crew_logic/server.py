@@ -1,10 +1,9 @@
 import json
 
-from flask import Flask, render_template, request
-from flask_socketio import SocketIO, emit
-
 from crew_types import Card
 from crew_utils import DEFAULT_PARAMETERS, get_deck
+from flask import Flask, render_template, request
+from flask_socketio import SocketIO, emit
 
 app: Flask = Flask(__name__)
 

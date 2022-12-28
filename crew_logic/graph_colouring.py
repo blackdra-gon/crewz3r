@@ -1,5 +1,4 @@
 from z3 import Bool, BoolRef, ModelRef, Not, Or, Solver
-
 from z3_util import Exactly_one
 
 number_of_vertices: int = 10

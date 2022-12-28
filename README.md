@@ -57,3 +57,13 @@ Run the following commands to enable:
 pip install pre-commit
 pre-commit install -f --install-hooks
 ```
+
+## Testing
+
+Unit tests and coverage analysis with
+[pytest](https://docs.pytest.org/en/latest/contents.html) and
+[hypothesis](https://hypothesis.readthedocs.io/en/latest/index.html) (WIP). Run with:
+
+```
+poetry run pytest
+```

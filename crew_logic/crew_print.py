@@ -104,7 +104,7 @@ def print_regular_tasks(tasks: list[Task]) -> None:
         elif task.order_constraint == -1:
             last_task = task
     if ordered_tasks:
-        ordered_tasks.sort(key=lambda task: task.order_constraint)
+        ordered_tasks.sort(key=lambda task: task.order_constraint)  # type: ignore
         # Only one type of constraint can exist, check on first element.
         if ordered_tasks[0].relative_constraint:
             # The game is using relative constraints
