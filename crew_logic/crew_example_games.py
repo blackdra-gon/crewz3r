@@ -10,6 +10,7 @@ from crew_tasks import (
 from crew_types import CardDistribution, Player
 from crew_utils import (
     DEFAULT_PARAMETERS,
+    FIVE_PLAYER_PARAMETERS,
     THREE_PLAYER_PARAMETERS,
     CrewGameParameters,
     CrewGameState,
@@ -392,3 +393,8 @@ def example_game(number: int | None) -> CrewGame:
 
 def random_game() -> CrewGame:
     return example_game(None)
+
+
+def random_game_mission_26(parameters: CrewGameParameters = FIVE_PLAYER_PARAMETERS):
+    special_tasks = [WinTricksWithSpecificValues(1, 2)]
+    return CrewGame(parameters, CrewGameState(special_tasks=special_tasks))
