@@ -54,9 +54,12 @@ def end_game() -> None:
 
 # when one player adds a card to its deck remove it from possible cards
 @socketio.on("card taken")
-def card_taken(card: Card) -> None:
-    print(card)
-    all_possible_cards.remove(card)
+def card_taken(card_str: str) -> None:
+    card: Card = tuple(json.loads(card_str))
+
+    if card in all_possible_cards:
+        all_possible_cards.remove(card)
+
     emit("cards updated", json.dumps(list(all_possible_cards)), broadcast=True)
 
 

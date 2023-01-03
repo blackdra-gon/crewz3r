@@ -1,3 +1,18 @@
+:root {
+    --card-trump: black;
+    --card-red: red;
+    --card-green: green;
+    --card-blue: blue;
+    --card-yellow: yellow;
+    --card-purple: purple;
+    --card-color--1: var(--card-trump);
+    --card-color-0: var(--card-red);
+    --card-color-1: var(--card-green);
+    --card-color-2: var(--card-blue);
+    --card-color-3: var(--card-yellow);
+    --card-color-4: var(--card-purple);
+}
+
 main .in_game {
     display: none;
 }
@@ -38,4 +53,68 @@ main.game_started .in_game {
 
 #connection-banner.connected .not-connected {
     display: none;
+}
+
+/* Hide input boxes */
+.card_number,
+.card_color {
+    height: 0;
+    width: 0;
+    visibility: hidden;
+}
+
+.card_number + label,
+.card_color + label {
+    cursor: pointer;
+    padding: 0.5em 1em;
+    border: 2px solid gray;
+    border-radius: 2px;
+    display: inline-block;
+}
+
+.card_number:disabled + label,
+.card_color:disabled + label {
+    pointer-events: none;
+    opacity: 0.5;
+    filter: grayscale(1);
+}
+
+.card_color + label {
+    color: transparent;
+}
+
+.card_number + label:hover,
+.card_color + label:hover,
+.card_number:focus + label,
+.card_color:focus + label {
+    border-color: #333;
+}
+
+.card_number:checked + label,
+.card_color:checked  + label {
+    border-color: black;
+}
+
+label[for="card_color_-1"] {
+    background-color: var(--card-color--1);
+}
+
+label[for="card_color_0"] {
+    background-color: var(--card-color-0);
+}
+
+label[for="card_color_1"] {
+    background-color: var(--card-color-1);
+}
+
+label[for="card_color_2"] {
+    background-color: var(--card-color-2);
+}
+
+label[for="card_color_3"] {
+    background-color: var(--card-color-3);
+}
+
+label[for="card_color_4"] {
+    background-color: var(--card-color-4);
 }
