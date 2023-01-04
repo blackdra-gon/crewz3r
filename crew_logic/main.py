@@ -24,14 +24,14 @@ def run_game(game: CrewGame) -> None:
 def main() -> None:
     # run_game(example_game(1))
     # run_game(example_game(2))
-    run_game(example_game(3))
+    # run_game(example_game(3))
     # run_game(example_game(4))
     # run_game(random_game())
-    # game = example_game(42)
+    run_game(example_game(7))
     # for game_state in all_task_distributions(
-    #     game.player_hands, game.initial_state.tasks, game.parameters
+    #    game.player_hands, game.initial_state.tasks, game.parameters
     # ):
-    #     run_game(CrewGame(game.parameters, game_state))
+    #    run_game(CrewGame(game.parameters, game_state))
 
 
 if __name__ == "__main__":
