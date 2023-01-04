@@ -9,7 +9,7 @@
       src="/static/scripts/socket.io.min.js"
       defer
     ></script>
-    <script src="/static/scripts/main.js" defer></script>
+    <script type="text/javascript" src="/static/scripts/main.js" defer></script>
   </head>
   <body>
     <main>
@@ -31,10 +31,12 @@
       <div class="in_game">
         <button type="button" id="end_game">Spiel beenden</button>
         <button type="button" id="submit_card">Karte auswählen</button>
-        <button type="button" id="finish_card_selection">Auswahl beenden</button>
+        <button type="button" id="finish_card_selection">
+          Auswahl beenden
+        </button>
         <form id="card"></form>
         <p>Ausgewählte Karten:</p>
-        <p id="selected_cards">/p>
+        <p id="selected_cards"></p>
       </div>
     </main>
   </body>

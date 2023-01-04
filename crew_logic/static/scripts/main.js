@@ -118,7 +118,7 @@ socket.on("cards updated", (cardsJsonString) => {
 });
 
 socket.on("selected card updated", (cardsJsonString) => {
-  document.getElementById("selected_cards").innerHTML = cardsJsonString
+  document.getElementById("selected_cards").innerHTML = cardsJsonString;
 });
 
 document.getElementById("name").addEventListener("submit", (event) => {
@@ -134,9 +134,11 @@ document.getElementById("end_game").addEventListener("click", () => {
   socket.emit("end game");
 });
 
-document.getElementById("finish_card_selection").addEventListener("click", () => {
-  socket.emit("finish card selection");
-});
+document
+  .getElementById("finish_card_selection")
+  .addEventListener("click", () => {
+    socket.emit("finish card selection");
+  });
 
 document.getElementById("submit_card").addEventListener("click", (event) => {
   const number_element = document.querySelector("[name='card_number']:checked");
@@ -154,11 +156,8 @@ document.getElementById("submit_card").addEventListener("click", (event) => {
     const number = parseInt(number_element.value);
 
     for (const color of colors) {
-      if (cards_contain_card([color, number])) {
-        document.getElementById(`card_color_${color}`).disabled = false;
-      } else {
-        document.getElementById(`card_color_${color}`).disabled = true;
-      }
+      document.getElementById(`card_color_${color}`).disabled =
+        !cards_contain_card([color, number]);
     }
   }
 
