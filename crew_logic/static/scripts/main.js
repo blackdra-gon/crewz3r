@@ -10,12 +10,13 @@ const emit_name = () => {
 };
 
 const update_buttons = (prefix, ids) => {
-  old_elements = document.querySelectorAll(`[id*=${prefix}_]`);
+  let old_elements = document.querySelectorAll(`[id*=${prefix}_]`);
 
   for (const element of old_elements) {
-      element.disabled = true;
+    element.disabled = true;
   }
 
+  let id;
   for (id of ids) {
     const element = document.getElementById(`${prefix}_${id}`);
 
@@ -27,39 +28,39 @@ const update_buttons = (prefix, ids) => {
   }
 
   const checked_element = document.querySelector(`[id*=${prefix}_]:checked`);
-  if (checked_element && checked_element.disabled == true) {
+  if (checked_element && checked_element.disabled === true) {
     checked_element.checked = false;
   }
-}
+};
 
 const add_new_button = (prefix, id) => {
   const input_element = document.createElement("input");
-  input_element.setAttribute("type", "radio")
+  input_element.setAttribute("type", "radio");
   input_element.classList.add(prefix);
-  input_element.setAttribute("name", prefix)
-  input_element.setAttribute("id", `${prefix}_${id}`)
+  input_element.setAttribute("name", prefix);
+  input_element.setAttribute("id", `${prefix}_${id}`);
   input_element.setAttribute("value", id);
 
-  const label_element = document.createElement("label")
-  label_element.setAttribute("for", `${prefix}_${id}`)
+  const label_element = document.createElement("label");
+  label_element.setAttribute("for", `${prefix}_${id}`);
   label_element.innerText = id;
 
-  document.getElementById("card").appendChild(input_element)
+  document.getElementById("card").appendChild(input_element);
   document.getElementById("card").appendChild(label_element);
-}
+};
 
 const cards_contain_card = (card_comp) => {
   let contains_card = false;
 
   for (const card of cards) {
-    if (card[0] == card_comp[0] && card[1] == card_comp[1]) {
+    if (card[0] === card_comp[0] && card[1] === card_comp[1]) {
       contains_card = true;
       break;
     }
   }
 
   return contains_card;
-}
+};
 
 socket.on("connect", () => {
   document.getElementById("connection-banner").classList.add("connected");
@@ -74,12 +75,12 @@ socket.on("user list", (user_string) => {
   const users_element = document.getElementById("users");
   const user_count_element = document.querySelector("[data-user-count]");
 
-  users = JSON.parse(user_string);
+  let users = JSON.parse(user_string);
 
   // update user count
   user_count_element.innerText = Object.keys(users).length;
 
-  // empty and update user name list
+  // empty and update username list
   users_element.innerHTML = "";
 
   for (const id in users) {
@@ -101,8 +102,7 @@ socket.on("game ended", () => {
   document.querySelector("main").classList.remove("game_started");
 });
 
-
-socket.on('cards updated', (cardsJsonString) => {
+socket.on("cards updated", (cardsJsonString) => {
   cards = JSON.parse(cardsJsonString);
 
   colors.clear();
@@ -148,10 +148,8 @@ document.getElementById("card").addEventListener("change", (event) => {
     for (const color of colors) {
       if (cards_contain_card([color, number])) {
         document.getElementById(`card_color_${color}`).disabled = false;
-      }
-      else {
+      } else {
         document.getElementById(`card_color_${color}`).disabled = true;
-
       }
     }
   }
@@ -160,12 +158,8 @@ document.getElementById("card").addEventListener("change", (event) => {
     const color = parseInt(color_element.value);
 
     for (const number of numbers) {
-      if (cards_contain_card([color, number])) {
-        document.getElementById(`card_number_${number}`).disabled = false;
-      }
-      else {
-        document.getElementById(`card_number_${number}`).disabled = true;
-      }
+      document.getElementById(`card_number_${number}`).disabled =
+        !cards_contain_card([color, number]);
     }
   }
 });
