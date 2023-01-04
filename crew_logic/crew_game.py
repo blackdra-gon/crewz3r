@@ -19,6 +19,7 @@ from crew_utils import (
     CrewGameState,
     CrewGameTrick,
     deal_cards,
+    no_card_duplicates,
 )
 from z3 import (
     And,
@@ -86,13 +87,8 @@ class CrewGameBase:
             if len(hand) != self.NUMBER_OF_TRICKS:
                 raise ValueError("Hands of different lengths.")
         # Each card may only occur once in the given distribution.
-        for j, hand in enumerate(self.player_hands):
-            for i, card in enumerate(hand):
-                if any(
-                    [card in h for h in self.player_hands[j + 1 :]]
-                    + [card == c for c in hand[i + 1 :]]
-                ):
-                    raise ValueError("Duplicate cards.")
+        if not no_card_duplicates(self.player_hands):
+            raise ValueError("Duplicate cards.")
 
         self._init_solver_setup()
         self._init_tasks_setup()

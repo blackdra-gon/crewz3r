@@ -117,6 +117,10 @@ socket.on("cards updated", (cardsJsonString) => {
   update_buttons("card_number", Array.from(numbers).sort());
 });
 
+socket.on("selected card updated", (cardsJsonString) => {
+  document.getElementById("selected_cards").innerHTML = cardsJsonString
+});
+
 document.getElementById("name").addEventListener("submit", (event) => {
   event.preventDefault();
   emit_name();
@@ -130,7 +134,11 @@ document.getElementById("end_game").addEventListener("click", () => {
   socket.emit("end game");
 });
 
-document.getElementById("card").addEventListener("change", (event) => {
+document.getElementById("finish_card_selection").addEventListener("click", () => {
+  socket.emit("finish card selection");
+});
+
+document.getElementById("submit_card").addEventListener("click", (event) => {
   const number_element = document.querySelector("[name='card_number']:checked");
   const color_element = document.querySelector("[name='card_color']:checked");
 

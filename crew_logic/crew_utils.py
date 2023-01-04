@@ -161,5 +161,16 @@ def print_random_card_distribution(number_of_players: int):
     print(hands)
 
 
+def no_card_duplicates(distribution: CardDistribution) -> bool:
+    for j, hand in enumerate(distribution):
+        for i, card in enumerate(hand):
+            if any(
+                [card in h for h in distribution[j + 1 :]]
+                + [card == c for c in hand[i + 1 :]]
+            ):
+                return False
+    return True
+
+
 if __name__ == "__main__":
     print_random_card_distribution(4)
