@@ -1,100 +1,235 @@
 import json
+from dataclasses import dataclass
+from enum import Enum, auto
 
 from crew_types import Card, CardDistribution
-from crew_utils import DEFAULT_PARAMETERS, get_deck, no_card_duplicates
+from crew_utils import (
+    DEFAULT_PARAMETERS,
+    CrewGameParameters,
+    get_deck,
+    no_card_duplicates,
+)
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit
 
-app: Flask = Flask(__name__)
 
-# start websocket server
+class UserStatus(Enum):
+    CONNECTED = auto()
+    CARD_SELECTION = auto()
+    CARD_SELECTION_FINISHED = auto()
+    TASK_SELECTION = auto()
+    TASK_SELECTION_FINISHED = auto()
+    AWAITING_RESULT = auto()
+
+
+@dataclass
+class User:
+    sid: str
+    name: str
+    status: UserStatus
+    player_index: int | None = None
+
+
+# define websocket server
+app: Flask = Flask(__name__)
 socketio: SocketIO = SocketIO(app, cors_allowed_origins="*")
 
-all_possible_cards: list[Card] = get_deck(DEFAULT_PARAMETERS)
 
-# all users that have the site open
-users: dict[str, str] = {}
-# users that started a game (empty when no game started)
-players: dict[str, str] = {}
-player_ids: dict[str, int] = {}
-players_finished: dict[str, bool] = {}
-colour_names = {-1: "Trumpf", 0: "Rot", 1: "Grün", 2: "Blau", 3: "Gelb"}
+COLOUR_NAMES = {-1: "Trumpf", 0: "Rot", 1: "Grün", 2: "Blau", 3: "Gelb"}
 
+all_possible_cards: list[Card]
 card_distribution: CardDistribution
+
+users: dict[str, User] = {}
+
+
+def get_sid() -> str:
+    return request.sid  # type: ignore
+
+
+def get_user_list() -> dict[str, str]:
+    return {user.sid: user.name for user in users.values()}
+
+
+def send_user_list() -> None:
+    emit("user list", json.dumps(get_user_list()), broadcast=True)
 
 
 @socketio.on("connect")
 def connect() -> None:
-    users.update({request.sid: ""})  # type: ignore
-    emit("user list", json.dumps(users), broadcast=True)
-    print(f"new connection: {request.sid}, user count: {len(users)}")  # type: ignore
-    if len(players) > 0:
-        emit("game started", json.dumps(players), broadcast=True)
-        emit(
-            "cards updated",
-            json.dumps(list(all_possible_cards)),
-            broadcast=True,
-        )
+
+    global users
+
+    sid: str = get_sid()
+    users[sid] = User(sid, "", UserStatus.CONNECTED)
+
+    print(f"New connection: {sid}, user count: {len(users)}.")
+    print("Users:", users, sep="\n")
+
+    send_user_list()
 
 
 @socketio.on("update name")
 def update_name(name: str) -> None:
-    users.update({request.sid: name})  # type: ignore
-    emit("user list", json.dumps(users), broadcast=True)
+
+    sid: str = get_sid()
+
+    print(f"User {sid!r} updated name from {users[sid].name!r} to {name!r}.")
+
+    users[sid].name = name
+    send_user_list()
 
 
-@socketio.on("start game")
-def start_game() -> None:
-    global players, player_ids, card_distribution, players_finished
-    players = users.copy()
-    player_ids = {sid: i for (i, sid) in enumerate(players.keys())}
-    players_finished = {sid: False for sid in players.keys()}
-    print(player_ids)
-    card_distribution = [[]] * len(players)
-    emit("game started", json.dumps(players), broadcast=True)
+@socketio.on("start card selection")
+def start_card_selection() -> None:
+
+    global all_possible_cards, card_distribution, users
+
+    player_count = len(users)
+    parameters: CrewGameParameters = DEFAULT_PARAMETERS
+    try:
+        parameters.number_of_players = player_count
+    except ValueError as e:
+        print(f"Invalid player count:\n{e!r}")
+        emit("not enough players")
+        return
+
+    all_possible_cards = get_deck(parameters)
+    card_distribution = [[] for _ in range(player_count)]
+
+    for i, user in enumerate(users.values()):
+        if user.status == UserStatus.CONNECTED:
+            user.status = UserStatus.CARD_SELECTION
+            user.player_index = i
+
+    print("Starting card selection.")
+    print("Parameters:", parameters, sep="\n")
+    print("Users:", users, sep="\n")
+
+    emit("card selection started", json.dumps(get_user_list()), broadcast=True)
     emit("cards updated", json.dumps(list(all_possible_cards)), broadcast=True)
-
-
-@socketio.on("end game")
-def end_game() -> None:
-    players.clear()
-    emit("game ended", broadcast=True)
-
-
-@socketio.on("finish card selection")
-def finish_card_selection() -> None:
-    players_finished[request.sid] = True  # type: ignore
-    if all(players_finished.values()):
-        if no_card_duplicates(card_distribution):
-            emit("task selection")
-        else:
-            print("Duplicate Cards")
-            emit("end game")
 
 
 # when one player adds a card to its deck remove it from possible cards
 @socketio.on("card taken")
 def card_taken(card_str: str) -> None:
-    global card_distribution
-    card: Card = tuple(json.loads(card_str))
-    player = player_ids[request.sid]  # type: ignore
 
-    if card in all_possible_cards:
-        all_possible_cards.remove(card)
-        card_distribution[player].append(card)
-        print("Card " + card_str + f" was taken from player {player}")
-        emit("cards updated", json.dumps(list(all_possible_cards)), broadcast=True)
-        selected_cards = ""
-        for colour, value in card_distribution[player]:
-            selected_cards += f"({colour_names[colour]}, {value}), "
-        emit("selected card updated", selected_cards)
+    global all_possible_cards, card_distribution
+
+    sid: str = get_sid()
+    player = users[sid].player_index
+    card: Card = tuple(json.loads(card_str))
+
+    if card not in all_possible_cards:
+        print(f"Unavailable card {card_str} was taken by {users[sid].name} ({sid}).")
+        return
+
+    all_possible_cards.remove(card)
+    emit("cards updated", json.dumps(list(all_possible_cards)), broadcast=True)
+
+    card_distribution[player].append(card)
+
+    print(f"Card {card_str} was taken by {users[sid].name} ({sid}).")
+    print("Card distribution:", card_distribution, sep="\n")
+
+    selected_cards = ", ".join(
+        f"({COLOUR_NAMES[c]}, {v})" for c, v in card_distribution[player]
+    )
+    emit("selected cards updated", selected_cards)
+
+
+@socketio.on("finish card selection")
+def finish_card_selection() -> None:
+
+    global card_distribution
+
+    sid: str = get_sid()
+
+    if users[sid].status == UserStatus.CARD_SELECTION:
+        users[sid].status = UserStatus.CARD_SELECTION_FINISHED
+        print(f"User {users[sid].name!r} ({sid!r}) finished card selection.")
+
+    if all(u.status == UserStatus.CARD_SELECTION_FINISHED for u in users.values()):
+        print("Card selection finished for all users.")
+        if no_card_duplicates(card_distribution):
+            emit("start task selection")
+        else:
+            print("ERROR: duplicate cards.")
+            emit("end game")
+
+
+@socketio.on("start task selection")
+def start_task_selection() -> None:
+
+    for user in users.values():
+        if user.status == UserStatus.CARD_SELECTION_FINISHED:
+            user.status = UserStatus.TASK_SELECTION
+
+    print("Starting task selection.")
+    print("Users:", users, sep="\n")
+
+    emit("task selection started")
+
+
+@socketio.on("task taken")
+def task_taken() -> None:
+    pass  # TODO: implement
+
+
+@socketio.on("finish task selection")
+def finish_task_selection() -> None:
+
+    sid: str = get_sid()
+
+    if users[sid].status == UserStatus.TASK_SELECTION:
+        users[sid].status = UserStatus.TASK_SELECTION_FINISHED
+        print(f"User {users[sid].name!r} ({sid!r}) finished task selection.")
+
+    if all(u.status == UserStatus.TASK_SELECTION_FINISHED for u in users.values()):
+        print("Task selection finished for all users.")
+        if True:  # TODO: check for duplicates
+            emit("start solver")
+        else:
+            print("ERROR: duplicate tasks.")
+            emit("end game")
+
+
+@socketio.on("start solver")
+def start_solver() -> None:
+
+    for user in users.values():
+        if user.status == UserStatus.TASK_SELECTION_FINISHED:
+            user.status = UserStatus.AWAITING_RESULT
+
+    # TODO: start solver
+
+    print("Starting solver.")
+
+    emit("solver started")
+
+
+@socketio.on("end game")
+def end_game() -> None:
+
+    for u in users.values():
+        u.status = UserStatus.CONNECTED
+        u.player_index = None
+
+    print("Ending the game.")
+
+    emit("game ended", broadcast=True)
 
 
 @socketio.on("disconnect")
 def disconnect() -> None:
-    users.pop(request.sid)  # type: ignore
-    emit("user list", json.dumps(users), broadcast=True)
-    print(f"disconnected: {request.sid}, user count: {len(users)}")  # type: ignore
+
+    global users
+
+    sid: str = get_sid()
+    users.pop(sid)
+    send_user_list()
+
+    print(f"User {users[sid].name!r} ({sid!r}) disconnected, user count: {len(users)}.")
 
 
 @app.route("/")
@@ -102,6 +237,9 @@ def index() -> str:
     return render_template("index.html")
 
 
-# If you are running it using python <filename> then below command will be used
-if __name__ == "__main__":
+def main() -> None:
     socketio.run(app, host="0.0.0.0", allow_unsafe_werkzeug=True)
+
+
+if __name__ == "__main__":
+    main()

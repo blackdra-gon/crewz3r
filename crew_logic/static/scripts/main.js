@@ -92,8 +92,8 @@ socket.on("user list", (user_string) => {
   }
 });
 
-socket.on("game started", () => {
-  console.log("game started");
+socket.on("card selection started", () => {
+  console.log("starting card selection");
   document.querySelector("main").classList.add("game_started");
 });
 
@@ -117,7 +117,7 @@ socket.on("cards updated", (cardsJsonString) => {
   update_buttons("card_number", Array.from(numbers).sort());
 });
 
-socket.on("selected card updated", (cardsJsonString) => {
+socket.on("selected cards updated", (cardsJsonString) => {
   document.getElementById("selected_cards").innerHTML = cardsJsonString;
 });
 
@@ -127,7 +127,7 @@ document.getElementById("name").addEventListener("submit", (event) => {
 });
 
 document.getElementById("start_game").addEventListener("click", () => {
-  socket.emit("start game");
+  socket.emit("start card selection");
 });
 
 document.getElementById("end_game").addEventListener("click", () => {
