@@ -63,7 +63,7 @@ def end_game() -> None:
 
 @socketio.on("finish card selection")
 def finish_card_selection() -> None:
-    players_finished[request.sid] = True
+    players_finished[request.sid] = True  # type: ignore
     if all(players_finished.values()):
         if no_card_duplicates(card_distribution):
             emit("task selection")
@@ -77,7 +77,7 @@ def finish_card_selection() -> None:
 def card_taken(card_str: str) -> None:
     global card_distribution
     card: Card = tuple(json.loads(card_str))
-    player = player_ids[request.sid]
+    player = player_ids[request.sid]  # type: ignore
 
     if card in all_possible_cards:
         all_possible_cards.remove(card)

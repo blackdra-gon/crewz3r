@@ -125,13 +125,11 @@ def deal_cards(parameters: CrewGameParameters) -> CardDistribution:
     remaining_cards: list[Card] = get_deck(parameters)
     hands: list[Hand] = []
     for i in range(parameters.number_of_players):
-        hand: tuple[Card, ...] = tuple(
-            sorted(random.sample(remaining_cards, number_of_tricks))
-        )
+        hand: list[Card] = sorted(random.sample(remaining_cards, number_of_tricks))
         for card in hand:
             remaining_cards.remove(card)
         hands.append(hand)
-    return tuple(hands)
+    return hands
 
 
 def all_task_distributions(
@@ -149,7 +147,7 @@ def all_task_distributions(
         yield CrewGameState(hands, None, tasks)
 
 
-def print_random_card_distribution(number_of_players: int):
+def print_random_card_distribution(number_of_players: int) -> None:
     if number_of_players == 3:
         hands = deal_cards(THREE_PLAYER_PARAMETERS)
     elif number_of_players == 4:

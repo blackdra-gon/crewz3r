@@ -20,7 +20,7 @@ class Task:
         else:
             assert order_constraint in (-1, 0, 1, 2, 3, 4, 5)
         self.card: Card = card
-        self.player: Player = player
+        self.player: Player | None = player
         self.order_constraint: int = order_constraint
         self.relative_constraint: bool = relative_constraint
 
