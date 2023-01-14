@@ -3,6 +3,10 @@ let cards = [];
 let colors = new Set();
 let numbers = new Set();
 
+//************************************************************
+//        Function Declarations
+//************************************************************
+
 // Sends name to server
 const emit_name = () => {
   const name = document.querySelector("[name='name']");
@@ -66,6 +70,12 @@ const cards_contain_card = (card_comp) => {
   return contains_card;
 };
 
+//************************************************************
+//        Reaction to Socket Messages
+//************************************************************
+
+// Connection banner
+
 socket.on("connect", () => {
   document.getElementById("connection-banner").classList.add("connected");
   emit_name();
@@ -74,6 +84,8 @@ socket.on("connect", () => {
 socket.on("disconnect", () => {
   document.getElementById("connection-banner").classList.remove("connected");
 });
+
+// start page
 
 socket.on("user list", (user_string) => {
   const users_element = document.getElementById("users");
@@ -100,6 +112,8 @@ socket.on("card selection started", () => {
   console.log("starting card selection");
   document.querySelector("main").classList.add("card_selection");
 });
+
+// card selection page
 
 socket.on("task selection started", () => {
   console.log("starting task selection");
@@ -133,6 +147,10 @@ socket.on("selected cards updated", (cardsJsonString) => {
   document.getElementById("selected_cards").innerHTML = cardsJsonString;
 });
 
+//************************************************************
+//        Initialization of EventListeners
+//************************************************************
+
 document.getElementById("name").addEventListener("submit", (event) => {
   event.preventDefault();
   emit_name();
@@ -152,7 +170,7 @@ document
     socket.emit("finish card selection");
   });
 
-document.getElementById("submit_card").addEventListener("click", () => {
+const submitCardListener = () => {
   const number_element = document.querySelector("[name='card_number']:checked");
   const color_element = document.querySelector("[name='card_color']:checked");
 
@@ -160,9 +178,17 @@ document.getElementById("submit_card").addEventListener("click", () => {
     const number = parseInt(number_element.value);
     const color = parseInt(color_element.value);
 
-    socket.emit("card taken", JSON.stringify([color, number]));
+    socket.emit("card_or_task taken", JSON.stringify([color, number]));
   }
-});
+};
+
+document
+  .getElementById("submit_card")
+  .addEventListener("click", () => submitCardListener());
+
+document
+  .getElementById("submit_task")
+  .addEventListener("click", () => submitCardListener());
 
 document.getElementById("card_selection").addEventListener("change", () => {
   const number_element = document.querySelector("[name='card_number']:checked");

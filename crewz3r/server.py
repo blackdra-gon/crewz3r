@@ -34,13 +34,17 @@ class User:
 app: Flask = Flask(__name__)
 socketio: SocketIO = SocketIO(app, cors_allowed_origins="*")
 
-
 COLOUR_NAMES = {-1: "Trumpf", 0: "Rot", 1: "Grün", 2: "Blau", 3: "Gelb"}
 
 all_possible_cards: list[Card]
 card_distribution: CardDistribution
 
 users: dict[str, User] = {}
+
+
+# ***********************************************************
+#        helper functions
+# ***********************************************************
 
 
 def get_sid() -> str:
@@ -53,6 +57,11 @@ def get_user_list() -> dict[str, str]:
 
 def send_user_list() -> None:
     emit("user list", json.dumps(get_user_list()), broadcast=True)
+
+
+# ***********************************************************
+#        start page
+# ***********************************************************
 
 
 @socketio.on("connect")
@@ -110,26 +119,44 @@ def start_card_selection() -> None:
     emit("cards updated", json.dumps(list(all_possible_cards)), broadcast=True)
 
 
+# ***********************************************************
+#        card selection
+# ***********************************************************
+
 # when one player adds a card to its deck remove it from possible cards
-@socketio.on("card taken")
-def card_taken(card_str: str) -> None:
+@socketio.on("card_or_task taken")
+def card_or_task_taken(card_str: str) -> None:
+    sid: str = get_sid()
+    user = users[sid]
+    card: Card = tuple(json.loads(card_str))
+
+    if user.status == UserStatus.CARD_SELECTION:
+        card_taken(card, user)
+    elif user.status == UserStatus.TASK_SELECTION:
+        task_taken(card, user)
+    else:
+        print(
+            f"Warning: {user.name} ({user.sid}) "
+            + f"tried to take a card in status {user.status}"
+        )
+
+
+def card_taken(card: Card, user: User) -> None:
 
     global all_possible_cards, card_distribution
 
-    sid: str = get_sid()
-    player = users[sid].player_index
-    card: Card = tuple(json.loads(card_str))
-
     if card not in all_possible_cards:
-        print(f"Unavailable card {card_str} was taken by {users[sid].name} ({sid}).")
+        print(f"Unavailable card {card} was taken by {user.name} ({user.sid}).")
         return
+
+    player = user.player_index
 
     all_possible_cards.remove(card)
     emit("cards updated", json.dumps(list(all_possible_cards)), broadcast=True)
 
     card_distribution[player].append(card)
 
-    print(f"Card {card_str} was taken by {users[sid].name} ({sid}).")
+    print(f"Card {card} was taken by {user.name} ({user.sid}).")
     print("Card distribution:", card_distribution, sep="\n")
 
     selected_cards = ", ".join(
@@ -159,7 +186,7 @@ def finish_card_selection() -> None:
             print("Starting task selection.")
             print("Users:", users, sep="\n")
 
-            emit("task selection started")
+            emit("task selection started", broadcast=True)
             emit("cards updated", json.dumps(list(all_possible_cards)), broadcast=True)
         else:
             print("ERROR: duplicate cards.")
