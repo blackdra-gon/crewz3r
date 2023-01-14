@@ -5,8 +5,8 @@ from dataclasses import dataclass, field
 from itertools import permutations
 from typing import Any
 
-from crew_logic.crew_tasks import SpecialTask, Task
-from crew_logic.crew_types import Card, CardDistribution, Colour, Hand, Player
+from crewz3r.crew_tasks import SpecialTask, Task
+from crewz3r.crew_types import Card, CardDistribution, Colour, Hand, Player
 
 # Internal constant representing the colour of trump cards.
 TRUMP_COLOUR: Colour = -1

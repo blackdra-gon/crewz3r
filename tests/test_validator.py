@@ -3,7 +3,7 @@ from typing import Any
 from hypothesis import given
 from hypothesis import strategies as st
 
-from crew_logic.crew_utils import Validator
+from crewz3r.crew_utils import Validator
 
 
 class NoneV(Validator):

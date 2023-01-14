@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "crew-logic"
+name = "crewz3r"
 version = "0.1.0"
 description = "Calculate solutions to the cooperative card game 'The Crew'"
 authors = [

@@ -1,7 +1,7 @@
 from hypothesis import given
 from hypothesis import strategies as st
 
-from crew_logic.crew_utils import IntegerV
+from crewz3r.crew_utils import IntegerV
 
 
 class UsesIntegerV:

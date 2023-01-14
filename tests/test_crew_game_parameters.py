@@ -2,7 +2,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from crew_logic.crew_utils import CrewGameParameters
+from crewz3r.crew_utils import CrewGameParameters
 
 player_numbers = st.integers(min_value=2)
 colour_numbers = st.integers(min_value=1)
