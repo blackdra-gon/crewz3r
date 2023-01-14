@@ -13,15 +13,23 @@
     --card-color-4: var(--card-purple);
 }
 
-main .in_game {
+main .card_selection_view, main .task_selection_view {
     display: none;
 }
 
-main.game_started .start {
+main.card_selection .start_view {
     display: none;
 }
 
-main.game_started .in_game {
+main.card_selection .card_selection_view {
+    display: block;
+}
+
+main.task_selection .start_view, .card_selection_view {
+    display: none;
+}
+
+main.task_selection .task_selection_view {
     display: block;
 }
 

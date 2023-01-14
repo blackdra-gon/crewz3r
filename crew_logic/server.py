@@ -141,7 +141,7 @@ def card_taken(card_str: str) -> None:
 @socketio.on("finish card selection")
 def finish_card_selection() -> None:
 
-    global card_distribution
+    global all_possible_cards, card_distribution
 
     sid: str = get_sid()
 
@@ -152,23 +152,18 @@ def finish_card_selection() -> None:
     if all(u.status == UserStatus.CARD_SELECTION_FINISHED for u in users.values()):
         print("Card selection finished for all users.")
         if no_card_duplicates(card_distribution):
-            emit("start task selection")
+            for user in users.values():
+                if user.status == UserStatus.CARD_SELECTION_FINISHED:
+                    user.status = UserStatus.TASK_SELECTION
+
+            print("Starting task selection.")
+            print("Users:", users, sep="\n")
+
+            emit("task selection started")
+            emit("cards updated", json.dumps(list(all_possible_cards)), broadcast=True)
         else:
             print("ERROR: duplicate cards.")
             emit("end game")
-
-
-@socketio.on("start task selection")
-def start_task_selection() -> None:
-
-    for user in users.values():
-        if user.status == UserStatus.CARD_SELECTION_FINISHED:
-            user.status = UserStatus.TASK_SELECTION
-
-    print("Starting task selection.")
-    print("Users:", users, sep="\n")
-
-    emit("task selection started")
 
 
 @socketio.on("task taken")
@@ -188,24 +183,18 @@ def finish_task_selection() -> None:
     if all(u.status == UserStatus.TASK_SELECTION_FINISHED for u in users.values()):
         print("Task selection finished for all users.")
         if True:  # TODO: check for duplicates
-            emit("start solver")
+            for user in users.values():
+                if user.status == UserStatus.TASK_SELECTION_FINISHED:
+                    user.status = UserStatus.AWAITING_RESULT
+
+            # TODO: start solver
+
+            print("Starting solver.")
+
+            emit("solver started")
         else:
             print("ERROR: duplicate tasks.")
             emit("end game")
-
-
-@socketio.on("start solver")
-def start_solver() -> None:
-
-    for user in users.values():
-        if user.status == UserStatus.TASK_SELECTION_FINISHED:
-            user.status = UserStatus.AWAITING_RESULT
-
-    # TODO: start solver
-
-    print("Starting solver.")
-
-    emit("solver started")
 
 
 @socketio.on("end game")

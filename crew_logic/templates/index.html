@@ -18,7 +18,7 @@
         <span class="connected">Connected</span>
       </div>
       <!-- Start page -->
-      <div class="start">
+      <div class="start_view">
         <p><span data-user-count>0</span> in der Lobby</p>
         <ul id="users"></ul>
         <form id="name">
@@ -27,16 +27,24 @@
         </form>
         <button type="button" id="start_game">Spiel starten</button>
       </div>
-      <!-- Game page -->
-      <div class="in_game">
+      <!-- Card selection -->
+      <div class="card_selection_view">
         <button type="button" id="end_game">Spiel beenden</button>
         <button type="button" id="submit_card">Karte auswählen</button>
         <button type="button" id="finish_card_selection">
           Auswahl beenden
         </button>
-        <form id="card"></form>
+        <form id="card_selection"></form>
         <p>Ausgewählte Karten:</p>
         <p id="selected_cards"></p>
+      </div>
+      <!-- Task selection -->
+      <div class="task_selection_view">
+        <button type="button" id="submit_task">Auftrag auswählen</button>
+        <button type="button" id="finish_task_selection">
+          Auswahl beenden
+        </button>
+        <form id="task_selection"></form>
       </div>
     </main>
   </body>

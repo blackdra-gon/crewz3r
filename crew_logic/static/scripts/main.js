@@ -34,6 +34,10 @@ const update_buttons = (prefix, ids) => {
 };
 
 const add_new_button = (prefix, id) => {
+  let form = document.querySelector("main").classList.contains("task_selection")
+    ? "task_selection"
+    : "card_selection";
+
   const input_element = document.createElement("input");
   input_element.setAttribute("type", "radio");
   input_element.classList.add(prefix);
@@ -45,8 +49,8 @@ const add_new_button = (prefix, id) => {
   label_element.setAttribute("for", `${prefix}_${id}`);
   label_element.innerText = id;
 
-  document.getElementById("card").appendChild(input_element);
-  document.getElementById("card").appendChild(label_element);
+  document.getElementById(form).appendChild(input_element);
+  document.getElementById(form).appendChild(label_element);
 };
 
 const cards_contain_card = (card_comp) => {
@@ -94,12 +98,20 @@ socket.on("user list", (user_string) => {
 
 socket.on("card selection started", () => {
   console.log("starting card selection");
-  document.querySelector("main").classList.add("game_started");
+  document.querySelector("main").classList.add("card_selection");
+});
+
+socket.on("task selection started", () => {
+  console.log("starting task selection");
+  document.getElementById("card_selection").remove();
+  document.querySelector("main").classList.remove("card_selection");
+  document.querySelector("main").classList.add("task_selection");
 });
 
 socket.on("game ended", () => {
   console.log("game ended");
-  document.querySelector("main").classList.remove("game_started");
+  document.querySelector("main").classList.remove("task_selection");
+  document.querySelector("main").classList.remove("card_selection");
 });
 
 socket.on("cards updated", (cardsJsonString) => {
@@ -140,7 +152,7 @@ document
     socket.emit("finish card selection");
   });
 
-document.getElementById("submit_card").addEventListener("click", (event) => {
+document.getElementById("submit_card").addEventListener("click", () => {
   const number_element = document.querySelector("[name='card_number']:checked");
   const color_element = document.querySelector("[name='card_color']:checked");
 
@@ -149,8 +161,12 @@ document.getElementById("submit_card").addEventListener("click", (event) => {
     const color = parseInt(color_element.value);
 
     socket.emit("card taken", JSON.stringify([color, number]));
-    return;
   }
+});
+
+document.getElementById("card_selection").addEventListener("change", () => {
+  const number_element = document.querySelector("[name='card_number']:checked");
+  const color_element = document.querySelector("[name='card_color']:checked");
 
   if (number_element !== null) {
     const number = parseInt(number_element.value);
