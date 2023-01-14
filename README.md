@@ -1,4 +1,4 @@
-# Crew Logic
+# Crewz3r
 
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
 [![code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
@@ -49,9 +49,23 @@ This project uses the [Black](https://github.com/psf/black) auto-formatter to en
 consistent code style. For editor/IDE integration, see
 [the documentation](https://black.readthedocs.io/en/stable/integrations/editors.html).
 
-### Setup
+### Setup with Pycharm
 
-Run the following commands to enable:
+1. Install Python 3.11 `sudo apt install python3.11`
+2. Setup Python Interpreter in Pycharm
+3. Install Poetry
+   1. Install python-venv
+      ``sudo apt install python3.11-venv`
+   2. Install poetry
+      `curl -sSL https://install.python-poetry.org | python3 -`
+      https://python-poetry.org/docs/#installing-with-the-official-installer
+   3. Update Path
+      If the install script tells you so, add
+      export PATH="/home/benjamin/.local/bin:$PATH"
+      to ~/.bashrc
+4. Now you should be ready to execute crewz3r with pycharm or poetry (s. above)
+
+5. Run the following commands to enable pre-commit-hooks:
 
 ```
 pip install pre-commit
