@@ -102,12 +102,16 @@ class CrewGameSolution:
     tricks: list[CrewGameTrick]
 
 
-def get_deck(parameters: CrewGameParameters) -> list[Card]:
+def get_deck_without_trump(parameters: CrewGameParameters) -> list[Card]:
     return [
         (color, value)
         for color in range(parameters.number_of_colours)
         for value in range(1, parameters.max_card_value + 1)
-    ] + [
+    ]
+
+
+def get_deck(parameters: CrewGameParameters) -> list[Card]:
+    return get_deck_without_trump(parameters) + [
         (TRUMP_COLOUR, value)
         for value in range(1, parameters.max_trump_value + 1)
         if parameters.max_trump_value > 0

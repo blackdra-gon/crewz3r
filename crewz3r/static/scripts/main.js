@@ -147,6 +147,10 @@ socket.on("selected cards updated", (cardsJsonString) => {
   document.getElementById("selected_cards").innerHTML = cardsJsonString;
 });
 
+socket.on("selected tasks updated", (cardsJsonString) => {
+  document.getElementById("selected_tasks").innerHTML = cardsJsonString;
+});
+
 //************************************************************
 //        Initialization of EventListeners
 //************************************************************

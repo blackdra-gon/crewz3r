@@ -24,6 +24,16 @@ class Task:
         self.order_constraint: int = order_constraint
         self.relative_constraint: bool = relative_constraint
 
+    def __str__(self):
+        ret = f"Task: {self.card} to player {self.player}"
+        if self.order_constraint != 0:
+            constraint_type = "relative" if self.relative_constraint else "absolute"
+            ret += f", {constraint_type} order: {self.order_constraint}"
+        return ret
+
+    def __repr__(self):
+        return self.__str__()
+
 
 class SpecialTask:
     """Base class for all non-standard tasks."""

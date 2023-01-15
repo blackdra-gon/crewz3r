@@ -2,11 +2,13 @@ import json
 from dataclasses import dataclass
 from enum import Enum, auto
 
+from crew_tasks import Task
 from crew_types import Card, CardDistribution
 from crew_utils import (
     DEFAULT_PARAMETERS,
     CrewGameParameters,
     get_deck,
+    get_deck_without_trump,
     no_card_duplicates,
 )
 from flask import Flask, render_template, request
@@ -37,7 +39,9 @@ socketio: SocketIO = SocketIO(app, cors_allowed_origins="*")
 COLOUR_NAMES = {-1: "Trumpf", 0: "Rot", 1: "Grün", 2: "Blau", 3: "Gelb"}
 
 all_possible_cards: list[Card]
+all_possible_tasks: list[Card]
 card_distribution: CardDistribution
+chosen_tasks: list[Task] = []
 
 users: dict[str, User] = {}
 
@@ -57,6 +61,10 @@ def get_user_list() -> dict[str, str]:
 
 def send_user_list() -> None:
     emit("user list", json.dumps(get_user_list()), broadcast=True)
+
+
+def card_string(card: Card) -> str:
+    return f"({COLOUR_NAMES[card[0]]}, {card[1]})"
 
 
 # ***********************************************************
@@ -92,7 +100,7 @@ def update_name(name: str) -> None:
 @socketio.on("start card selection")
 def start_card_selection() -> None:
 
-    global all_possible_cards, card_distribution, users
+    global all_possible_cards, card_distribution, users, all_possible_tasks
 
     player_count = len(users)
     parameters: CrewGameParameters = DEFAULT_PARAMETERS
@@ -104,6 +112,7 @@ def start_card_selection() -> None:
         return
 
     all_possible_cards = get_deck(parameters)
+    all_possible_tasks = get_deck_without_trump(parameters)
     card_distribution = [[] for _ in range(player_count)]
 
     for i, user in enumerate(users.values()):
@@ -159,9 +168,7 @@ def card_taken(card: Card, user: User) -> None:
     print(f"Card {card} was taken by {user.name} ({user.sid}).")
     print("Card distribution:", card_distribution, sep="\n")
 
-    selected_cards = ", ".join(
-        f"({COLOUR_NAMES[c]}, {v})" for c, v in card_distribution[player]
-    )
+    selected_cards = ", ".join(card_string(card) for card in card_distribution[player])
     emit("selected cards updated", selected_cards)
 
 
@@ -187,15 +194,34 @@ def finish_card_selection() -> None:
             print("Users:", users, sep="\n")
 
             emit("task selection started", broadcast=True)
-            emit("cards updated", json.dumps(list(all_possible_cards)), broadcast=True)
+            emit("cards updated", json.dumps(list(all_possible_tasks)), broadcast=True)
         else:
             print("ERROR: duplicate cards.")
             emit("end game")
 
 
 @socketio.on("task taken")
-def task_taken() -> None:
-    pass  # TODO: implement
+def task_taken(card: Card, user: User) -> None:
+    global all_possible_tasks, chosen_tasks
+
+    if card not in all_possible_tasks:
+        print(f"Unavailable task {card} was taken by {user.name} ({user.sid}).")
+        return
+
+    player = user.player_index
+
+    all_possible_tasks.remove(card)
+    emit("cards updated", json.dumps(list(all_possible_tasks)), broadcast=True)
+
+    chosen_tasks.append(Task(card, player))
+
+    print(f"Task {card} was taken by {user.name} ({user.sid}).")
+    print("Chosen tasks:", chosen_tasks, sep="\n")
+
+    selected_tasks = ", ".join(
+        [card_string(t.card) for t in chosen_tasks if t.player == player]
+    )
+    emit("selected tasks updated", selected_tasks)
 
 
 @socketio.on("finish task selection")

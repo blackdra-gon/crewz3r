@@ -63,9 +63,10 @@ consistent code style. For editor/IDE integration, see
       If the install script tells you so, add
       export PATH="/home/benjamin/.local/bin:$PATH"
       to ~/.bashrc
-4. Now you should be ready to execute crewz3r with pycharm or poetry (s. above)
+4. Install dependencies with `poetry install`
+5. Now you should be ready to execute crewz3r with pycharm or poetry (s. above)
 
-5. Run the following commands to enable pre-commit-hooks:
+6. Run the following commands to enable pre-commit-hooks:
 
 ```
 pip install pre-commit
