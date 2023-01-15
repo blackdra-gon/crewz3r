@@ -2,17 +2,18 @@ import json
 from dataclasses import dataclass
 from enum import Enum, auto
 
-from crew_tasks import Task
-from crew_types import Card, CardDistribution
-from crew_utils import (
+from flask import Flask, render_template, request
+from flask_socketio import SocketIO, emit
+
+from .crew_tasks import Task
+from .crew_types import Card, CardDistribution
+from .crew_utils import (
     DEFAULT_PARAMETERS,
     CrewGameParameters,
     get_deck,
     get_deck_without_trump,
     no_card_duplicates,
 )
-from flask import Flask, render_template, request
-from flask_socketio import SocketIO, emit
 
 
 class UserStatus(Enum):
@@ -100,7 +101,7 @@ def update_name(name: str) -> None:
 @socketio.on("start card selection")
 def start_card_selection() -> None:
 
-    global all_possible_cards, card_distribution, users, all_possible_tasks
+    global all_possible_cards, card_distribution, users
 
     player_count = len(users)
     parameters: CrewGameParameters = DEFAULT_PARAMETERS
@@ -146,7 +147,7 @@ def card_or_task_taken(card_str: str) -> None:
     else:
         print(
             f"Warning: {user.name} ({user.sid}) "
-            + f"tried to take a card in status {user.status}"
+            f"tried to take a card in status {user.status}"
         )
 
 

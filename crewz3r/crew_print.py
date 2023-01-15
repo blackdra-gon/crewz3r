@@ -1,6 +1,6 @@
-from crew_tasks import SpecialTask, Task
-from crew_types import Card, CardDistribution, Colour, Player
-from crew_utils import CrewGameParameters, CrewGameSolution, CrewGameState
+from .crew_tasks import SpecialTask, Task
+from .crew_types import Card, CardDistribution, Colour, Player
+from .crew_utils import CrewGameParameters, CrewGameSolution, CrewGameState
 
 COLOUR_NAMES = ("R", "G", "B", "Y", "P", "N", "X")
 

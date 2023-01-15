@@ -1,26 +1,5 @@
 import random
 
-from crew_tasks import (
-    AssignTrickToPlayer,
-    NoTricksWithValueTask,
-    NullGame,
-    Task,
-    WinTricksWithSpecificValues,
-)
-from crew_types import Card, CardDistribution, Colour, Player
-from crew_utils import (
-    DEFAULT_PARAMETERS,
-    FIVE_PLAYER_PARAMETERS,
-    FOUR_PLAYER_PARAMETERS,
-    THREE_PLAYER_PARAMETERS,
-    TRUMP_COLOUR,
-    CrewGameParameters,
-    CrewGameSolution,
-    CrewGameState,
-    CrewGameTrick,
-    deal_cards,
-    no_card_duplicates,
-)
 from z3 import (
     And,
     ArithRef,
@@ -33,6 +12,28 @@ from z3 import (
     Or,
     Solver,
     sat,
+)
+
+from .crew_tasks import (
+    AssignTrickToPlayer,
+    NoTricksWithValueTask,
+    NullGame,
+    Task,
+    WinTricksWithSpecificValues,
+)
+from .crew_types import Card, CardDistribution, Colour, Player
+from .crew_utils import (
+    DEFAULT_PARAMETERS,
+    FIVE_PLAYER_PARAMETERS,
+    FOUR_PLAYER_PARAMETERS,
+    THREE_PLAYER_PARAMETERS,
+    TRUMP_COLOUR,
+    CrewGameParameters,
+    CrewGameSolution,
+    CrewGameState,
+    CrewGameTrick,
+    deal_cards,
+    no_card_duplicates,
 )
 
 

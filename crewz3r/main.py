@@ -1,8 +1,8 @@
 import time
 
-from crew_example_games import random_game_mission_26
-from crew_game import CrewGame
-from crew_print import print_initial_game_state, print_solution
+from .crew_example_games import random_game_mission_26
+from .crew_game import CrewGame
+from .crew_print import print_initial_game_state, print_solution
 
 
 def run_game(game: CrewGame) -> None:

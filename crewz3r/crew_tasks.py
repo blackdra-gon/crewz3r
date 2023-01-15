@@ -1,4 +1,4 @@
-from crewz3r.crew_types import Card, Player
+from .crew_types import Card, Player
 
 
 class Task:

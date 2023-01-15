@@ -1,14 +1,14 @@
 import random
 
-from crew_game import CrewGame
-from crew_tasks import (
+from .crew_game import CrewGame
+from .crew_tasks import (
     AssignTrickToPlayer,
     NullGame,
     SpecialTask,
     WinTricksWithSpecificValues,
 )
-from crew_types import CardDistribution, Player
-from crew_utils import (
+from .crew_types import CardDistribution, Player
+from .crew_utils import (
     DEFAULT_PARAMETERS,
     FIVE_PLAYER_PARAMETERS,
     THREE_PLAYER_PARAMETERS,
