@@ -1,7 +1,7 @@
 const socket = io();
 let cards = [];
-let colors = new Set();
-let numbers = new Set();
+let tasks = [];
+let activeView = document.querySelector(".start_view");
 
 //************************************************************
 //        Function Declarations
@@ -13,61 +13,161 @@ const emit_name = () => {
   socket.emit("update name", name.value);
 };
 
-const update_buttons = (prefix, ids) => {
-  let old_elements = document.querySelectorAll(`[id*=${prefix}_]`);
-
-  for (const element of old_elements) {
-    element.disabled = true;
-  }
-
-  let id;
-  for (id of ids) {
-    const element = document.getElementById(`${prefix}_${id}`);
-
-    if (element) {
-      element.disabled = false;
-    } else {
-      add_new_button(prefix, id);
-    }
-  }
-
-  const checked_element = document.querySelector(`[id*=${prefix}_]:checked`);
-  if (checked_element && checked_element.disabled === true) {
-    checked_element.checked = false;
-  }
-};
-
-const add_new_button = (prefix, id) => {
-  let form = document.querySelector("main").classList.contains("task_selection")
-    ? "task_selection"
-    : "card_selection";
-
-  const input_element = document.createElement("input");
-  input_element.setAttribute("type", "radio");
-  input_element.classList.add(prefix);
-  input_element.setAttribute("name", prefix);
-  input_element.setAttribute("id", `${prefix}_${id}`);
-  input_element.setAttribute("value", id);
-
-  const label_element = document.createElement("label");
-  label_element.setAttribute("for", `${prefix}_${id}`);
-  label_element.innerText = id;
-
-  document.getElementById(form).appendChild(input_element);
-  document.getElementById(form).appendChild(label_element);
-};
-
-const cards_contain_card = (card_comp) => {
-  let contains_card = false;
+const get_unique_colors_of_cards = () => {
+  let colors = new Set();
 
   for (const card of cards) {
-    if (card[0] === card_comp[0] && card[1] === card_comp[1]) {
-      contains_card = true;
-      break;
+    colors.add(card[0]);
+  }
+
+  return Array.from(colors).sort();
+};
+
+const get_number_list_for_color = (card_color) => {
+  const numbers = new Set();
+
+  for (const card of cards) {
+    const color = card[0];
+    const number = card[1];
+
+    if (color == card_color) {
+      numbers.add(number);
     }
   }
 
-  return contains_card;
+  return Array.from(numbers).sort();
+};
+
+const get_color_tab_button = (color_name) => {
+  const tabButton = document.createElement("button");
+  tabButton.type = "button";
+  tabButton.classList.add("tablink");
+  tabButton.classList.add(`card_color_${color_name}`);
+  tabButton.dataset.target = color_name;
+
+  return tabButton;
+};
+
+const get_color_tab_content_wrapper = (color_name) => {
+  const wrapper = document.createElement("div");
+  wrapper.classList.add("tabcontent");
+  wrapper.classList.add(`card_color_${color_name}`);
+  wrapper.classList.add(`tab_${color_name}`);
+
+  return wrapper;
+};
+
+const get_task_order_radio = (symbol, color_name) => {
+  const id = `${color_name}_task_order_${symbol}`;
+  const input = document.createElement("input");
+  input.id = id;
+  input.setAttribute("type", "radio");
+  input.setAttribute("name", `${color_name}_task_order`);
+  input.setAttribute("value", symbol);
+  input.classList.add("task_order");
+
+  const label = document.createElement("label");
+  label.setAttribute("for", id);
+  label.innerText = symbol;
+
+  const wrapper = document.createElement("div");
+  wrapper.classList.add(`task_wrapper`);
+  wrapper.classList.add(`task_order_${symbol}`);
+  wrapper.appendChild(input);
+  wrapper.appendChild(label);
+
+  return wrapper;
+};
+
+const get_color_number_input = (
+  prefix,
+  color_name,
+  number,
+  type = "checkbox",
+) => {
+  const id = `${prefix}_${color_name}_${number}`;
+  const input = document.createElement("input");
+  input.id = id;
+  input.setAttribute("type", type);
+  input.setAttribute("name", color_name);
+  input.setAttribute("value", number);
+  input.classList.add("card_number");
+
+  const label = document.createElement("label");
+  label.setAttribute("for", id);
+  label.innerText = number;
+
+  const wrapper = document.createElement("div");
+  wrapper.classList.add("color_wrapper");
+  wrapper.appendChild(input);
+  wrapper.appendChild(label);
+
+  return wrapper;
+};
+
+const add_task_order_radios = (tab_content_wrapper, color_name) => {
+  // TODO get from game logic
+  const symbols = [
+    "Kein",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "❯",
+    "❯❯",
+    "❯❯❯",
+    "❯❯❯❯",
+    "Ω",
+  ];
+  for (const symbol of symbols) {
+    const task_order_radio = get_task_order_radio(symbol, color_name);
+    tab_content_wrapper.appendChild(task_order_radio);
+  }
+
+  tab_content_wrapper.querySelector(`.task_order`).checked = true;
+};
+
+const add_tab_for_color = (color_name) => {
+  const isTaskSelection = activeView.classList.contains("task_selection_view");
+  let number_input_type = "checkbox";
+  let prefix = "card_selection";
+
+  const tab = activeView.querySelector(".tab");
+  const tab_button = get_color_tab_button(color_name);
+  const tab_content_wrapper = get_color_tab_content_wrapper(color_name);
+
+  if (isTaskSelection) {
+    add_task_order_radios(tab_content_wrapper, color_name);
+    number_input_type = "radio";
+    prefix = "task_selection";
+  }
+
+  for (number of get_number_list_for_color(color_name)) {
+    const color_number_checkbox = get_color_number_input(
+      prefix,
+      color_name,
+      number,
+      number_input_type,
+    );
+    tab_content_wrapper.appendChild(color_number_checkbox);
+  }
+
+  tab.appendChild(tab_button);
+  tab.after(tab_content_wrapper);
+};
+
+const updated_selected_cards = (card_type, cards_list) => {
+  const target_element = document.getElementById(`selected_${card_type}`);
+  target_element.innerHTML = "";
+
+  for (const card of cards_list) {
+    let card_element = document.createElement("div");
+    card_element.classList.add(`card`);
+    card_element.dataset.color = card[0];
+    card_element.innerHTML = card[1];
+    target_element.append(card_element);
+  }
 };
 
 //************************************************************
@@ -108,18 +208,23 @@ socket.on("user list", (user_string) => {
   }
 });
 
-socket.on("card selection started", () => {
-  console.log("starting card selection");
-  document.querySelector("main").classList.add("card_selection");
+socket.on("not enough players", () => {
+  // TODO display info
 });
 
 // card selection page
+socket.on("card selection started", () => {
+  console.log("starting card selection");
+  document.querySelector("main").classList.add("card_selection");
+  activeView = document.querySelector(".card_selection_view");
+});
 
+// task selection page
 socket.on("task selection started", () => {
   console.log("starting task selection");
-  document.getElementById("card_selection").remove();
   document.querySelector("main").classList.remove("card_selection");
   document.querySelector("main").classList.add("task_selection");
+  activeView = document.querySelector(".task_selection_view");
 });
 
 socket.on("game ended", () => {
@@ -131,24 +236,21 @@ socket.on("game ended", () => {
 socket.on("cards updated", (cardsJsonString) => {
   cards = JSON.parse(cardsJsonString);
 
-  colors.clear();
-  numbers.clear();
-
-  for (const item of cards) {
-    colors.add(item[0]);
-    numbers.add(item[1]);
+  for (const color of get_unique_colors_of_cards()) {
+    add_tab_for_color(color);
   }
 
-  update_buttons("card_color", Array.from(colors).sort());
-  update_buttons("card_number", Array.from(numbers).sort());
+  activeView.querySelector(".tab .tablink").click();
 });
 
 socket.on("selected cards updated", (cardsJsonString) => {
-  document.getElementById("selected_cards").innerHTML = cardsJsonString;
+  cards = JSON.parse(cardsJsonString);
+  updated_selected_cards("cards", cards);
 });
 
 socket.on("selected tasks updated", (cardsJsonString) => {
-  document.getElementById("selected_tasks").innerHTML = cardsJsonString;
+  tasks = JSON.parse(cardsJsonString);
+  updated_selected_cards("tasks", tasks);
 });
 
 //************************************************************
@@ -168,51 +270,54 @@ document.getElementById("end_game").addEventListener("click", () => {
   socket.emit("end game");
 });
 
+// Send card data
 document
-  .getElementById("finish_card_selection")
-  .addEventListener("click", () => {
-    socket.emit("finish card selection");
+  .getElementById("card_selection_form")
+  .addEventListener("submit", (event) => {
+    event.preventDefault();
+    for (data of new FormData(event.target)) {
+      const color = parseInt(data[0]);
+      const number = parseInt(data[1]);
+      // TODO send all cards with one call and finish selection
+      socket.emit("card_or_task taken", JSON.stringify([color, number]));
+      setTimeout(() => {
+        socket.emit("finish card selection");
+      }, 2000);
+    }
   });
 
-const submitCardListener = () => {
-  const number_element = document.querySelector("[name='card_number']:checked");
-  const color_element = document.querySelector("[name='card_color']:checked");
-
-  if (number_element !== null && color_element !== null) {
-    const number = parseInt(number_element.value);
-    const color = parseInt(color_element.value);
-
-    socket.emit("card_or_task taken", JSON.stringify([color, number]));
-  }
-};
-
+// Send task data
 document
-  .getElementById("submit_card")
-  .addEventListener("click", () => submitCardListener());
-
-document
-  .getElementById("submit_task")
-  .addEventListener("click", () => submitCardListener());
-
-document.getElementById("card_selection").addEventListener("change", () => {
-  const number_element = document.querySelector("[name='card_number']:checked");
-  const color_element = document.querySelector("[name='card_color']:checked");
-
-  if (number_element !== null) {
-    const number = parseInt(number_element.value);
-
-    for (const color of colors) {
-      document.getElementById(`card_color_${color}`).disabled =
-        !cards_contain_card([color, number]);
+  .getElementById("task_selection_form")
+  .addEventListener("submit", (event) => {
+    event.preventDefault();
+    for (data of new FormData(event.target)) {
+      const color = parseInt(data[0]);
+      const number = parseInt(data[1]);
+      // TODO how to pass order
+      socket.emit("card_or_task taken", JSON.stringify([color, number]));
     }
-  }
+  });
 
-  if (color_element !== null) {
-    const color = parseInt(color_element.value);
+document.querySelectorAll(".finish_task_selection").forEach((element) => {
+  element.addEventListener("click", () => {
+    socket.emit("finish task selection");
+  });
+});
 
-    for (const number of numbers) {
-      document.getElementById(`card_number_${number}`).disabled =
-        !cards_contain_card([color, number]);
+// Tab logic
+
+document.querySelectorAll(".tab").forEach((tab_element) => {
+  tab_element.addEventListener("click", ({ target }) => {
+    if (target.classList.contains("tablink")) {
+      const tabContent = tab_element.parentNode.querySelector(
+        `.tabcontent.tab_${target.dataset.target}`,
+      );
+
+      tabContent.parentNode.childNodes.forEach((el) =>
+        el.classList?.remove("active"),
+      );
+      tabContent.classList.add("active");
     }
-  }
+  });
 });

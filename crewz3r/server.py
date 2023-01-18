@@ -161,15 +161,15 @@ def card_taken(card: Card, user: User) -> None:
     player = user.player_index
 
     all_possible_cards.remove(card)
-    emit("cards updated", json.dumps(list(all_possible_cards)), broadcast=True)
+    # TODO check if we still need this
+    # emit("cards updated", json.dumps(list(all_possible_cards)), broadcast=True)
 
     card_distribution[player].append(card)
 
     print(f"Card {card} was taken by {user.name} ({user.sid}).")
     print("Card distribution:", card_distribution, sep="\n")
 
-    selected_cards = ", ".join(card_string(card) for card in card_distribution[player])
-    emit("selected cards updated", selected_cards)
+    emit("selected cards updated", json.dumps(card_distribution[player]))
 
 
 @socketio.on("finish card selection")
@@ -195,6 +195,7 @@ def finish_card_selection() -> None:
 
             emit("task selection started", broadcast=True)
             emit("cards updated", json.dumps(list(all_possible_tasks)), broadcast=True)
+            # TODO send selected cards
         else:
             print("ERROR: duplicate cards.")
             emit("end game")
@@ -211,17 +212,15 @@ def task_taken(card: Card, user: User) -> None:
     player = user.player_index
 
     all_possible_tasks.remove(card)
-    emit("cards updated", json.dumps(list(all_possible_tasks)), broadcast=True)
+    # TODO check if we still need this
+    # emit("cards updated", json.dumps(list(all_possible_tasks)), broadcast=True)
 
     chosen_tasks.append(Task(card, player))
 
     print(f"Task {card} was taken by {user.name} ({user.sid}).")
     print("Chosen tasks:", chosen_tasks, sep="\n")
 
-    selected_tasks = ", ".join(
-        [card_string(t.card) for t in chosen_tasks if t.player == player]
-    )
-    emit("selected tasks updated", selected_tasks)
+    emit("selected tasks updated", json.dumps(chosen_tasks[player]))
 
 
 @socketio.on("finish task selection")

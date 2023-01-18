@@ -3,6 +3,10 @@
 <html>
   <head>
     <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, height=device-height, initial-scale=1.0"
+    />
     <link rel="stylesheet" href="/static/styles/main.css" />
     <script
       type="text/javascript"
@@ -23,30 +27,54 @@
         <ul id="users"></ul>
         <form id="name">
           <input type="text" name="name" />
-          <button type="submit">Name ändern</button>
+          <button class="button" type="submit">Name ändern</button>
         </form>
-        <button type="button" id="start_game">Spiel starten</button>
+        <button class="button" type="button" id="start_game">
+          Spiel starten
+        </button>
       </div>
       <!-- Card selection -->
       <div class="card_selection_view">
-        <button type="button" id="end_game">Spiel beenden</button>
-        <button type="button" id="submit_card">Karte auswählen</button>
-        <button type="button" id="finish_card_selection">
-          Auswahl beenden
+        <button type="button" class="button" id="end_game">
+          Spiel abbrechen
         </button>
-        <form id="card_selection"></form>
-        <p>Ausgewählte Karten:</p>
-        <p id="selected_cards"></p>
+        <div class="card_deck">
+          <h2>Deine Karten</h2>
+          <p>Um Karten hinzu zu fügen, nutze die Eingabeleiste unten</p>
+          <div id="selected_cards" class="card_list"></div>
+        </div>
+        <form id="card_selection_form" class="card_selection_form">
+          <div class="tab">
+            <button type="submit" class="finish button">Auswahl beenden</button>
+          </div>
+        </form>
       </div>
       <!-- Task selection -->
       <div class="task_selection_view">
-        <button type="button" id="submit_task">Auftrag auswählen</button>
-        <button type="button" id="finish_task_selection">
-          Auswahl beenden
+        <button type="button" class="button" id="end_game">
+          Spiel abbrechen
         </button>
-        <form id="task_selection"></form>
-        <p>Ausgewählte Aufträge:</p>
-        <p id="selected_tasks"></p>
+        <div class="card_deck">
+          <h2>Deine Karten</h2>
+          <div id="selected_cards" class="card_list"></div>
+        </div>
+        <div class="card_deck tasks">
+          <h2>Deine Aufgaben</h2>
+          <div id="selected_tasks" class="card_list"></div>
+          <p>Um Aufgaben hinzu zu fügen, nutze die Eingabeleiste unten</p>
+        </div>
+        <form id="task_selection_form" class="card_selection_form">
+          <div class="tab">
+            <button type="submit" class="add button">Karte hinzufügen</button>
+            <button
+              type="button"
+              class="finish button"
+              id="finish_task_selection"
+            >
+              Auswahl beenden
+            </button>
+          </div>
+        </form>
       </div>
     </main>
   </body>
