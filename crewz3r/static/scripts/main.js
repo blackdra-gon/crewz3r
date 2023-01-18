@@ -158,7 +158,7 @@ const add_tab_for_color = (color_name) => {
 };
 
 const updated_selected_cards = (card_type, cards_list) => {
-  const target_element = document.getElementById(`selected_${card_type}`);
+  const target_element = activeView.querySelector(`.selected_${card_type}`);
   target_element.innerHTML = "";
 
   for (const card of cards_list) {
@@ -225,6 +225,8 @@ socket.on("task selection started", () => {
   document.querySelector("main").classList.remove("card_selection");
   document.querySelector("main").classList.add("task_selection");
   activeView = document.querySelector(".task_selection_view");
+  console.log("update cards");
+  updated_selected_cards("cards", cards);
 });
 
 socket.on("game ended", () => {
