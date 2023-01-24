@@ -25,7 +25,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 
-packages = [{ include = "crew_logic" }]
+packages = [{ include = "crewz3r" }]
 
 [tool.poetry.dependencies]
 python = ">=3.11"

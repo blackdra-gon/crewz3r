@@ -2,17 +2,21 @@ import json
 from dataclasses import dataclass
 from enum import Enum, auto
 
+from crew_game import CrewGame
 from crew_tasks import Task
 from crew_types import Card, CardDistribution
 from crew_utils import (
     DEFAULT_PARAMETERS,
     CrewGameParameters,
+    CrewGameState,
     get_deck,
     get_deck_without_trump,
     no_card_duplicates,
 )
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit
+
+from crewz3r.crew_print import print_initial_game_state, print_solution
 
 
 class UserStatus(Enum):
@@ -38,6 +42,7 @@ socketio: SocketIO = SocketIO(app, cors_allowed_origins="*")
 
 COLOUR_NAMES = {-1: "Trumpf", 0: "Rot", 1: "Grün", 2: "Blau", 3: "Gelb"}
 
+game_parameters: CrewGameParameters
 all_possible_cards: list[Card]
 all_possible_tasks: list[Card]
 card_distribution: CardDistribution
@@ -101,18 +106,19 @@ def update_name(name: str) -> None:
 def start_card_selection() -> None:
 
     global all_possible_cards, card_distribution, users, all_possible_tasks
+    global game_parameters
 
     player_count = len(users)
-    parameters: CrewGameParameters = DEFAULT_PARAMETERS
+    game_parameters = DEFAULT_PARAMETERS
     try:
-        parameters.number_of_players = player_count
+        game_parameters.number_of_players = player_count
     except ValueError as e:
         print(f"Invalid player count:\n{e!r}")
         emit("not enough players")
         return
 
-    all_possible_cards = get_deck(parameters)
-    all_possible_tasks = get_deck_without_trump(parameters)
+    all_possible_cards = get_deck(game_parameters)
+    all_possible_tasks = get_deck_without_trump(game_parameters)
     card_distribution = [[] for _ in range(player_count)]
 
     for i, user in enumerate(users.values()):
@@ -121,7 +127,7 @@ def start_card_selection() -> None:
             user.player_index = i
 
     print("Starting card selection.")
-    print("Parameters:", parameters, sep="\n")
+    print("Parameters:", game_parameters, sep="\n")
     print("Users:", users, sep="\n")
 
     emit("card selection started", json.dumps(get_user_list()), broadcast=True)
@@ -215,7 +221,7 @@ def task_taken(card: Card, user: User) -> None:
     # TODO check if we still need this
     # emit("cards updated", json.dumps(list(all_possible_tasks)), broadcast=True)
 
-    chosen_tasks.append(Task(card, player))
+    chosen_tasks.append(Task(card, player + 1))
 
     print(f"Task {card} was taken by {user.name} ({user.sid}).")
     print("Chosen tasks:", chosen_tasks, sep="\n")
@@ -225,6 +231,8 @@ def task_taken(card: Card, user: User) -> None:
 
 @socketio.on("finish task selection")
 def finish_task_selection() -> None:
+
+    global card_distribution, game_parameters
 
     sid: str = get_sid()
 
@@ -242,8 +250,16 @@ def finish_task_selection() -> None:
             # TODO: start solver
 
             print("Starting solver.")
+            game_state = CrewGameState(card_distribution, tasks=chosen_tasks)
+            game = CrewGame(game_parameters, game_state)
+            game.solve()
+            print_initial_game_state(game_parameters, game_state)
+            if game.has_solution():
+                print_solution(game.get_solution())
+            else:
+                print("No solution exists.")
 
-            emit("solver started")
+            emit("display result", broadcast=True)
         else:
             print("ERROR: duplicate tasks.")
             emit("end game")

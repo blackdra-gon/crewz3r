@@ -229,6 +229,13 @@ socket.on("task selection started", () => {
   updated_selected_cards("cards", cards);
 });
 
+socket.on("display result", () => {
+  console.log("display result");
+  document.querySelector("main").classList.remove("task_selection");
+  document.querySelector("main").classList.add("display_result");
+  activeView = document.querySelector(".display_result_view");
+});
+
 socket.on("game ended", () => {
   console.log("game ended");
   document.querySelector("main").classList.remove("task_selection");
@@ -272,6 +279,11 @@ document.getElementById("end_game").addEventListener("click", () => {
   socket.emit("end game");
 });
 
+document
+  .getElementById("finish_task_selection")
+  .addEventListener("click", () => {
+    socket.emit("finish task selection");
+  });
 // Send card data
 document
   .getElementById("card_selection_form")
@@ -301,11 +313,11 @@ document
     }
   });
 
-document.querySelectorAll(".finish_task_selection").forEach((element) => {
-  element.addEventListener("click", () => {
-    socket.emit("finish task selection");
-  });
-});
+//document.querySelectorAll(".finish_task_selection").forEach((element) => {
+//  element.addEventListener("click", () => {
+//    socket.emit("finish task selection");
+//  });
+//});
 
 // Tab logic
 

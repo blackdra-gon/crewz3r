@@ -28,7 +28,7 @@ button {
     cursor: pointer;
 }
 
-main .card_selection_view, main .task_selection_view {
+main .card_selection_view, main .task_selection_view, main .display_result_view {
     display: none;
 }
 
@@ -40,11 +40,19 @@ main.card_selection .card_selection_view {
     display: block;
 }
 
-main.task_selection .start_view, .card_selection_view {
+main.task_selection .start_view, .card_selection_view, .display_result_view {
     display: none;
 }
 
 main.task_selection .task_selection_view {
+    display: block;
+}
+
+main.display_result .start_view, .card_selection_view, .task_selection_view {
+    display: none;
+}
+
+main.display_result .display_result_view {
     display: block;
 }
 
