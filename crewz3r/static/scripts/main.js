@@ -213,14 +213,15 @@ socket.on("not enough players", () => {
 });
 
 // card selection page
-socket.on("card selection started", () => {
+socket.on("open card selection view", () => {
   console.log("starting card selection");
+  document.querySelector("main").classList.remove("task_selection");
   document.querySelector("main").classList.add("card_selection");
   activeView = document.querySelector(".card_selection_view");
 });
 
 // task selection page
-socket.on("task selection started", () => {
+socket.on("open task selection view", () => {
   console.log("starting task selection");
   document.querySelector("main").classList.remove("card_selection");
   document.querySelector("main").classList.add("task_selection");
@@ -229,7 +230,7 @@ socket.on("task selection started", () => {
   updated_selected_cards("cards", cards);
 });
 
-socket.on("display result", () => {
+socket.on("open result view", () => {
   console.log("display result");
   document.querySelector("main").classList.remove("task_selection");
   document.querySelector("main").classList.add("display_result");
@@ -257,6 +258,15 @@ socket.on("selected cards updated", (cardsJsonString) => {
   updated_selected_cards("cards", cards);
 });
 
+socket.on("set card selection checkboxes", (cardsJsonString) => {
+  cards = JSON.parse(cardsJsonString);
+  for (const card of cards) {
+    document.getElementById(
+      `card_selection_${card[0]}_${card[1]}`,
+    ).checked = true;
+  }
+});
+
 socket.on("selected tasks updated", (cardsJsonString) => {
   tasks = JSON.parse(cardsJsonString);
   updated_selected_cards("tasks", tasks);
@@ -278,6 +288,12 @@ document.getElementById("start_game").addEventListener("click", () => {
 document.getElementById("end_game").addEventListener("click", () => {
   socket.emit("end game");
 });
+
+document
+  .getElementById("back_to_card_selection")
+  .addEventListener("click", () => {
+    socket.emit("back to card selection");
+  });
 
 document
   .getElementById("finish_task_selection")

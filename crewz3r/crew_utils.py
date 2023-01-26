@@ -58,7 +58,7 @@ class CrewGameParameters(CrewGameParametersData):
 
     Setting max_trump_value to 0 disables trump cards."""
 
-    number_of_players = IntegerV(min_value=2)
+    number_of_players = IntegerV(min_value=3)
     number_of_colours = IntegerV(min_value=1)
     max_card_value = IntegerV(min_value=1)
     max_trump_value = IntegerV(min_value=0)
@@ -171,6 +171,15 @@ def no_card_duplicates(distribution: CardDistribution) -> bool:
                 + [card == c for c in hand[i + 1 :]]
             ):
                 return False
+    return True
+
+
+def no_task_duplicates(task_list: list[Task]) -> bool:
+    card_list: list[Card] = []
+    for task in task_list:
+        if task.card in card_list:
+            return False
+        card_list.append(task.card)
     return True
 
 
