@@ -14,7 +14,7 @@ from crew_utils import (
     get_deck_without_trump,
     no_card_duplicates,
 )
-from flask import Flask, render_template, request, make_response
+from flask import Flask, make_response, render_template, request
 from flask_socketio import SocketIO, emit
 
 from crewz3r.crew_print import print_initial_game_state, print_solution
@@ -83,7 +83,7 @@ def connect() -> None:
 
     global users
 
-    uid: str = request.cookies.get('crewz3r_id')
+    uid: str = request.cookies.get("crewz3r_id")
     users[uid] = User(uid, "", UserStatus.CONNECTED)
 
     print(f"New connection: {uid}, user count: {len(users)}.")
@@ -95,7 +95,7 @@ def connect() -> None:
 @socketio.on("update name")
 def update_name(name: str) -> None:
 
-    uid: str = request.cookies.get('crewz3r_id')
+    uid: str = request.cookies.get("crewz3r_id")
 
     print(f"User {uid!r} updated name from {users[uid].name!r} to {name!r}.")
 
@@ -142,7 +142,7 @@ def start_card_selection() -> None:
 # when one player adds a card to its deck remove it from possible cards
 @socketio.on("card_or_task taken")
 def card_or_task_taken(card_str: str) -> None:
-    uid: str = request.cookies.get('crewz3r_id')
+    uid: str = request.cookies.get("crewz3r_id")
     user = users[uid]
     card: Card = tuple(json.loads(card_str))
 
@@ -184,7 +184,7 @@ def finish_card_selection() -> None:
 
     global all_possible_cards, card_distribution
 
-    uid: str = request.cookies.get('crewz3r_id')
+    uid: str = request.cookies.get("crewz3r_id")
 
     if users[uid].status == UserStatus.CARD_SELECTION:
         users[uid].status = UserStatus.CARD_SELECTION_FINISHED
@@ -235,7 +235,7 @@ def finish_task_selection() -> None:
 
     global card_distribution, game_parameters
 
-    uid: str = request.cookies.get('crewz3r_id')
+    uid: str = request.cookies.get("crewz3r_id")
 
     if users[uid].status == UserStatus.TASK_SELECTION:
         users[uid].status = UserStatus.TASK_SELECTION_FINISHED
@@ -283,7 +283,7 @@ def disconnect() -> None:
 
     global users
 
-    uid: str = request.cookies.get('crewz3r_id')
+    uid: str = request.cookies.get("crewz3r_id")
 
     users.pop(uid)
     send_user_list()
@@ -293,11 +293,11 @@ def disconnect() -> None:
 
 @app.route("/")
 def index() -> str:
-    resp = make_response(render_template('index.html'))
+    resp = make_response(render_template("index.html"))
 
-    if request.cookies.get('crewz3r_id') == None:
-        resp.set_cookie('crewz3r_id', str(uuid.uuid4()), httponly=True)
-    
+    if request.cookies.get("crewz3r_id") is None:
+        resp.set_cookie("crewz3r_id", str(uuid.uuid4()), httponly=True)
+
     return resp
 
 
