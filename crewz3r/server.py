@@ -1,4 +1,5 @@
 import json
+import uuid
 from dataclasses import dataclass
 from enum import Enum, auto
 
@@ -13,7 +14,7 @@ from crew_utils import (
     get_deck_without_trump,
     no_card_duplicates,
 )
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, make_response
 from flask_socketio import SocketIO, emit
 
 from crewz3r.crew_print import print_initial_game_state, print_solution
@@ -82,10 +83,10 @@ def connect() -> None:
 
     global users
 
-    sid: str = get_sid()
-    users[sid] = User(sid, "", UserStatus.CONNECTED)
+    uid: str = request.cookies.get('crewz3r_id')
+    users[uid] = User(uid, "", UserStatus.CONNECTED)
 
-    print(f"New connection: {sid}, user count: {len(users)}.")
+    print(f"New connection: {uid}, user count: {len(users)}.")
     print("Users:", users, sep="\n")
 
     send_user_list()
@@ -94,11 +95,11 @@ def connect() -> None:
 @socketio.on("update name")
 def update_name(name: str) -> None:
 
-    sid: str = get_sid()
+    uid: str = request.cookies.get('crewz3r_id')
 
-    print(f"User {sid!r} updated name from {users[sid].name!r} to {name!r}.")
+    print(f"User {uid!r} updated name from {users[uid].name!r} to {name!r}.")
 
-    users[sid].name = name
+    users[uid].name = name
     send_user_list()
 
 
@@ -141,8 +142,8 @@ def start_card_selection() -> None:
 # when one player adds a card to its deck remove it from possible cards
 @socketio.on("card_or_task taken")
 def card_or_task_taken(card_str: str) -> None:
-    sid: str = get_sid()
-    user = users[sid]
+    uid: str = request.cookies.get('crewz3r_id')
+    user = users[uid]
     card: Card = tuple(json.loads(card_str))
 
     if user.status == UserStatus.CARD_SELECTION:
@@ -151,7 +152,7 @@ def card_or_task_taken(card_str: str) -> None:
         task_taken(card, user)
     else:
         print(
-            f"Warning: {user.name} ({user.sid}) "
+            f"Warning: {user.name} ({user.uid}) "
             + f"tried to take a card in status {user.status}"
         )
 
@@ -172,7 +173,7 @@ def card_taken(card: Card, user: User) -> None:
 
     card_distribution[player].append(card)
 
-    print(f"Card {card} was taken by {user.name} ({user.sid}).")
+    print(f"Card {card} was taken by {user.name} ({user.uid}).")
     print("Card distribution:", card_distribution, sep="\n")
 
     emit("selected cards updated", json.dumps(card_distribution[player]))
@@ -183,11 +184,11 @@ def finish_card_selection() -> None:
 
     global all_possible_cards, card_distribution
 
-    sid: str = get_sid()
+    uid: str = request.cookies.get('crewz3r_id')
 
-    if users[sid].status == UserStatus.CARD_SELECTION:
-        users[sid].status = UserStatus.CARD_SELECTION_FINISHED
-        print(f"User {users[sid].name!r} ({sid!r}) finished card selection.")
+    if users[uid].status == UserStatus.CARD_SELECTION:
+        users[uid].status = UserStatus.CARD_SELECTION_FINISHED
+        print(f"User {users[uid].name!r} ({uid!r}) finished card selection.")
 
     if all(u.status == UserStatus.CARD_SELECTION_FINISHED for u in users.values()):
         print("Card selection finished for all users.")
@@ -234,11 +235,11 @@ def finish_task_selection() -> None:
 
     global card_distribution, game_parameters
 
-    sid: str = get_sid()
+    uid: str = request.cookies.get('crewz3r_id')
 
-    if users[sid].status == UserStatus.TASK_SELECTION:
-        users[sid].status = UserStatus.TASK_SELECTION_FINISHED
-        print(f"User {users[sid].name!r} ({sid!r}) finished task selection.")
+    if users[uid].status == UserStatus.TASK_SELECTION:
+        users[uid].status = UserStatus.TASK_SELECTION_FINISHED
+        print(f"User {users[uid].name!r} ({uid!r}) finished task selection.")
 
     if all(u.status == UserStatus.TASK_SELECTION_FINISHED for u in users.values()):
         print("Task selection finished for all users.")
@@ -282,16 +283,22 @@ def disconnect() -> None:
 
     global users
 
-    sid: str = get_sid()
-    users.pop(sid)
+    uid: str = request.cookies.get('crewz3r_id')
+
+    users.pop(uid)
     send_user_list()
 
-    print(f"User {users[sid].name!r} ({sid!r}) disconnected, user count: {len(users)}.")
+    print(f"User {users[uid].name!r} ({uid!r}) disconnected, user count: {len(users)}.")
 
 
 @app.route("/")
 def index() -> str:
-    return render_template("index.html")
+    resp = make_response(render_template('index.html'))
+
+    if request.cookies.get('crewz3r_id') == None:
+        resp.set_cookie('crewz3r_id', str(uuid.uuid4()), httponly=True)
+    
+    return resp
 
 
 def main() -> None:
