@@ -51,6 +51,7 @@ all_unselected_cards: list[Card]
 all_possible_tasks: list[Card]
 card_distribution: CardDistribution
 chosen_tasks: list[Task] = []
+status_in_game: bool = False
 
 users: dict[str, User] = {}
 
@@ -130,8 +131,9 @@ def update_name(name: str) -> None:
 def start_card_selection() -> None:
 
     global all_possible_cards, card_distribution, users, all_possible_tasks
-    global game_parameters, all_unselected_cards
+    global game_parameters, all_unselected_cards, status_in_game
 
+    status_in_game = True
     player_count = len(users)
     game_parameters = DEFAULT_PARAMETERS
     try:
@@ -205,10 +207,28 @@ def card_taken(card: Card, user: User) -> None:
     emit("selected cards updated", json.dumps(card_distribution[player]))
 
 
+@socketio.on("cards selected")
+def cards_selected(card_list_str: str):
+
+    global card_distribution
+
+    uid: str = request.cookies.get("crewz3r_id")
+    user = users[uid]
+    player = user.player_index
+    card_list = [tuple(card) for card in json.loads(card_list_str)]
+    card_distribution[player] = card_list
+
+    print("Card distribution:", card_distribution, sep="\n")
+
+
+# To be removed, when the client requests the cards updated event
+task_selection_already_loaded: bool = False
+
+
 @socketio.on("finish card selection")
 def finish_card_selection() -> None:
 
-    global all_possible_cards, card_distribution
+    global all_possible_cards, card_distribution, task_selection_already_loaded
 
     uid: str = request.cookies.get("crewz3r_id")
 
@@ -220,7 +240,9 @@ def finish_card_selection() -> None:
         # print("Users:", users, sep="\n")
 
         emit("open task selection view")
-        emit("cards updated", json.dumps(list(all_possible_tasks)))
+        if not task_selection_already_loaded:
+            emit("cards updated", json.dumps(list(all_possible_tasks)))
+            task_selection_already_loaded = True
         # TODO send selected cards
         # else:
         #    print("ERROR: duplicate cards.")
@@ -256,7 +278,7 @@ def back_to_card_selection() -> None:
         users[uid].status = UserStatus.CARD_SELECTION
     print(f"User {users[uid].name!r} ({uid!r}) goes back to card selection.")
     emit("open card selection view")
-    emit("cards updated", json.dumps(list(all_possible_cards)))
+    # emit("cards updated", json.dumps(list(all_possible_cards)))
 
 
 @socketio.on("finish task selection")
@@ -297,7 +319,9 @@ def finish_task_selection() -> None:
 def end_game() -> None:
 
     global card_distribution, chosen_tasks, all_possible_tasks, all_possible_cards
-    global all_unselected_cards
+    global all_unselected_cards, status_in_game
+
+    status_in_game = False
 
     for u in users.values():
         u.status = UserStatus.CONNECTED
@@ -317,7 +341,7 @@ def end_game() -> None:
 @socketio.on("disconnect")
 def disconnect() -> None:
 
-    global users
+    global users, status_in_game
 
     uid: str = request.cookies.get("crewz3r_id")
 
@@ -325,7 +349,8 @@ def disconnect() -> None:
         f"User {users[uid].name!r} ({uid!r}) disconnected, "
         + f"user count: {len(users) - 1}."
     )
-    users.pop(uid)
+    if not status_in_game:
+        users.pop(uid)
     send_user_list()
 
 

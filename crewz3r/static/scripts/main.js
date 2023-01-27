@@ -285,7 +285,11 @@ document.getElementById("start_game").addEventListener("click", () => {
   socket.emit("start card selection");
 });
 
-document.getElementById("end_game").addEventListener("click", () => {
+document.getElementById("end_game_card").addEventListener("click", () => {
+  socket.emit("end game");
+});
+
+document.getElementById("end_game_task").addEventListener("click", () => {
   socket.emit("end game");
 });
 
@@ -305,15 +309,20 @@ document
   .getElementById("card_selection_form")
   .addEventListener("submit", (event) => {
     event.preventDefault();
+    let card_array = [];
     for (data of new FormData(event.target)) {
       const color = parseInt(data[0]);
       const number = parseInt(data[1]);
+      let card = [color, number];
+      card_array.push(card);
       // TODO send all cards with one call and finish selection
-      socket.emit("card_or_task taken", JSON.stringify([color, number]));
-      setTimeout(() => {
-        socket.emit("finish card selection");
-      }, 2000);
+      // socket.emit("card_or_task taken", JSON.stringify([color, number]));
+      // setTimeout(() => {
+      //  socket.emit("finish card selection");
+      //}, 2000);
     }
+    socket.emit("cards selected", JSON.stringify(card_array));
+    socket.emit("finish card selection");
   });
 
 // Send task data
