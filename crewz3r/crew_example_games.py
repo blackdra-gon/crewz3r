@@ -2,9 +2,11 @@ import random
 
 from crew_game import CrewGame
 from crew_tasks import (
+    AllTrumpsWinTrick,
     AssignTrickToPlayer,
     NullGame,
     SpecialTask,
+    TricksEquallyDistributed,
     WinTricksWithSpecificValues,
 )
 from crew_types import CardDistribution, Player
@@ -16,6 +18,7 @@ from crew_utils import (
     CrewGameState,
     Task,
     deal_cards,
+    get_captain_index,
 )
 
 
@@ -369,6 +372,21 @@ def example_game(number: int | None = None) -> CrewGame:
             ]
             special_tasks.append(WinTricksWithSpecificValues(1, 4))
             # for 1 to 3 ones, there exists a solution, for 4 not
+        case 8:
+            special_tasks.append(AllTrumpsWinTrick(in_order=True))
+            hands = deal_cards(parameters)
+        case 9:
+            parameters = FIVE_PLAYER_PARAMETERS
+            hands = deal_cards(parameters)
+            special_tasks.append(TricksEquallyDistributed())
+        case 10:
+            # Mission 34
+            parameters = FIVE_PLAYER_PARAMETERS
+            hands = deal_cards(parameters)
+            captain = get_captain_index(hands, parameters)
+            special_tasks.append(TricksEquallyDistributed())
+            special_tasks.append(AssignTrickToPlayer(captain, 1))
+            special_tasks.append(AssignTrickToPlayer(captain, -1))
         case _:
             if number:
                 description = f"There is no example game number {number}."

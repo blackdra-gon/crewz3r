@@ -70,3 +70,20 @@ class WinTricksWithSpecificValues(SpecialTask):
         )
         self.value = value
         self.number = number
+
+
+class AllTrumpsWinTrick(SpecialTask):
+    def __init__(self, in_order: bool):
+        self.in_order: bool = in_order
+        description: str = "All trump cards have to win a trick."
+        if in_order:
+            description += " The trump cards must be played in ascending order."
+        super().__init__(description)
+
+
+class TricksEquallyDistributed(SpecialTask):
+    def __init__(self):
+        super().__init__(
+            "At any time, a player must not have "
+            "won two more tricks than any other player."
+        )

@@ -1,6 +1,6 @@
 import time
 
-from crew_example_games import random_game_mission_26
+from crew_example_games import example_game, random_game_mission_26
 from crew_game import CrewGame
 from crew_print import print_initial_game_state, print_solution
 
@@ -33,7 +33,7 @@ def run_n_random_games(number: int) -> None:
 
 
 def main() -> None:
-    # run_game(example_game(1))
+    run_game(example_game(10))
     # run_game(example_game(2))
     # run_game(example_game(3))
     # run_game(example_game(4))
@@ -43,7 +43,7 @@ def main() -> None:
     #    game.player_hands, game.initial_state.tasks, game.parameters
     # ):
     #    run_game(CrewGame(game.parameters, game_state))
-    run_n_random_games(100)
+    # run_n_random_games(100)
 
 
 if __name__ == "__main__":

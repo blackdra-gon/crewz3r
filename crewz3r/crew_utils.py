@@ -183,5 +183,14 @@ def no_task_duplicates(task_list: list[Task]) -> bool:
     return True
 
 
+# counted from 1
+def get_captain_index(
+    cards: CardDistribution, parameters: CrewGameParameters
+) -> Player:
+    for i, hand in enumerate(cards, start=1):
+        if (-1, parameters.max_trump_value) in hand:
+            return i
+
+
 if __name__ == "__main__":
     print_random_card_distribution(4)

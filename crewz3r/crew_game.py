@@ -1,10 +1,13 @@
+import math
 import random
 
 from crew_tasks import (
+    AllTrumpsWinTrick,
     AssignTrickToPlayer,
     NoTricksWithValueTask,
     NullGame,
     Task,
+    TricksEquallyDistributed,
     WinTricksWithSpecificValues,
 )
 from crew_types import Card, CardDistribution, Colour, Player
@@ -391,6 +394,11 @@ class CrewGame(CrewGameBase):
                     self.add_special_task_tricks_with_specific_value(
                         special_task.value, special_task.number
                     )
+                case AllTrumpsWinTrick.__name__:
+                    special_task: AllTrumpsWinTrick
+                    self.add_special_task_all_trumps_win(special_task.in_order)
+                case TricksEquallyDistributed.__name__:
+                    self.add_special_task_tricks_equally_distributed()
                 case _:
                     raise NotImplementedError(type(special_task).__name__)
 
@@ -494,7 +502,10 @@ class CrewGame(CrewGameBase):
                 )
 
     def add_special_task_assign_trick(self, player: Player, trick_number: int) -> None:
-        self.solver.add(self.trick_winners[trick_number - 1] == player)
+        if trick_number < 0:
+            self.solver.add(self.trick_winners[trick_number] == player)
+        else:
+            self.solver.add(self.trick_winners[trick_number - 1] == player)
 
     def add_special_task_forbid_trick(self, player: Player, trick_number: int) -> None:
         self.solver.add(self.trick_winners[trick_number - 1] != player)
@@ -504,8 +515,8 @@ class CrewGame(CrewGameBase):
         self, value: int, number: int = 1
     ) -> None:
         # idea: we could use this Int Variable to print task completion markers
-        trick_number_helper_variable = [Int(f"helper_{i}") for i in range(number)]
-        self.solver.add(Distinct(trick_number_helper_variable))
+        trick_number_helper_variables = [Int(f"helper_{i}") for i in range(number)]
+        self.solver.add(Distinct(trick_number_helper_variables))
         self.solver.add(
             And(
                 [
@@ -515,7 +526,7 @@ class CrewGame(CrewGameBase):
                                 self.cards[j][k][1] == value,
                                 self.trick_winners[j] == k + 1,
                                 self.cards[j][k][0] != TRUMP_COLOUR,
-                                trick_number_helper_variable[i] == j,
+                                trick_number_helper_variables[i] == j,
                             )
                             for k in range(self.parameters.number_of_players)
                             for j in range(self.NUMBER_OF_TRICKS)
@@ -525,3 +536,18 @@ class CrewGame(CrewGameBase):
                 ]
             )
         )
+
+    def add_special_task_all_trumps_win(self, in_order: bool):
+        trump_cards = [(-1, i) for i in range(1, self.parameters.max_trump_value + 1)]
+        for trump_card in trump_cards:
+            for player, hand in enumerate(self.player_hands, start=1):
+                if trump_card in hand:
+                    self.add_card_task(player, trump_card)
+        if in_order:
+            self.add_task_constraint_absolute_order(trump_cards)
+
+    def add_special_task_tricks_equally_distributed(self):
+        p = self.parameters.number_of_players
+        number_of_blocks = math.ceil(self.NUMBER_OF_TRICKS / p)
+        for i in range(0, number_of_blocks * p, p):
+            self.solver.add(Distinct(self.trick_winners[i : i + p]))
