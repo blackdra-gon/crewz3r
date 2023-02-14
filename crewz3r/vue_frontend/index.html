@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Vue Test</title>
+  </head>
+  <body>
+    <div id="app">
+      <p>{{ message }}</p>
+      <p>
+        <router-link to="/">Start</router-link> |
+        <router-link to="/view_2">View_2</router-link>
+      </p>
+      <router-view></router-view>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/vue-router@4"></script>
+    <script type="text/javascript" src="/vue_static/vuetest.js" defer></script>
+  </body>
+</html>

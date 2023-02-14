@@ -40,7 +40,20 @@ class User:
 
 
 # define websocket server
-app: Flask = Flask(__name__)
+class CustomFlask(Flask):
+    jinja_options = Flask.jinja_options.copy()
+    jinja_options.update(
+        dict(
+            variable_start_string="%%",
+            variable_end_string="%%",
+            # Default is '{{', I'm changing this because Vue.js uses '{{' / '}}'
+        )
+    )
+
+
+app: Flask = CustomFlask(
+    __name__, template_folder="vue_frontend", static_folder="vue_static"
+)
 socketio: SocketIO = SocketIO(app, cors_allowed_origins="*")
 
 COLOUR_NAMES = {-1: "Trumpf", 0: "Rot", 1: "Grün", 2: "Blau", 3: "Gelb"}
