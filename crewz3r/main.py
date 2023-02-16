@@ -8,6 +8,8 @@ from crew_print import print_initial_game_state, print_solution
 def run_game(game: CrewGame) -> None:
     print_initial_game_state(game.parameters, game.initial_state)
 
+    print(game.get_assertions())
+
     start_time: float = time.time()
 
     game.solve()
@@ -19,6 +21,8 @@ def run_game(game: CrewGame) -> None:
         print_solution(game.get_solution())
     else:
         print("No solution exists.")
+        print(game.get_unsat_core())
+        print(game.solver.statistics())
 
 
 def run_n_random_games(number: int) -> None:
@@ -33,7 +37,7 @@ def run_n_random_games(number: int) -> None:
 
 
 def main() -> None:
-    run_game(example_game(10))
+    run_game(example_game(2))
     # run_game(example_game(2))
     # run_game(example_game(3))
     # run_game(example_game(4))

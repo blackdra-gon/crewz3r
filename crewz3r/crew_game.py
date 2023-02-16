@@ -291,6 +291,12 @@ class CrewGameBase:
         self.check_result = self.solver.check()
         self.is_solved = True
 
+    def get_assertions(self) -> str:
+        return self.solver.non_units()
+
+    def get_unsat_core(self) -> str:
+        return self.solver.unsat_core()
+
     def has_solution(self) -> bool | None:
         return self.check_result == sat if self.is_solved else None
 
