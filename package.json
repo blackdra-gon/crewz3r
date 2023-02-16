@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Calculate solutions to the cooperative card game 'The Crew'",
   "scripts": {
-    "dev": "vite crewz3r/frontend"
+    "dev": "vite crewz3r/frontend --host"
   },
   "dependencies": {
     "socket.io-client": "^4.6.0",

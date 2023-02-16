@@ -68,6 +68,12 @@ consistent code style. For editor/IDE integration, see
 
 6. Run the following commands to enable pre-commit-hooks:
 
+### Start frontend server
+
+1. Install nodejs 16
+2. `npm install` to install dependencies
+3. npm run dev to start server
+
 ```
 pip install pre-commit
 pre-commit install -f --install-hooks
