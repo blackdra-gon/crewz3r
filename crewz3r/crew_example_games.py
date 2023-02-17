@@ -5,6 +5,7 @@ from crew_tasks import (
     AllTrumpsWinTrick,
     AssignTrickToPlayer,
     NullGame,
+    PlayerWinsExactlyOneTrick,
     SpecialTask,
     TricksEquallyDistributed,
     WinTricksWithSpecificValues,
@@ -387,6 +388,10 @@ def example_game(number: int | None = None) -> CrewGame:
             special_tasks.append(TricksEquallyDistributed())
             special_tasks.append(AssignTrickToPlayer(captain, 1))
             special_tasks.append(AssignTrickToPlayer(captain, -1))
+        case 11:
+            # Mission 33
+            hands = deal_cards(parameters)
+            special_tasks.append(PlayerWinsExactlyOneTrick(1))
         case _:
             if number:
                 description = f"There is no example game number {number}."

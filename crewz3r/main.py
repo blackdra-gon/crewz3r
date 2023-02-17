@@ -8,7 +8,7 @@ from crew_print import print_initial_game_state, print_solution
 def run_game(game: CrewGame) -> None:
     print_initial_game_state(game.parameters, game.initial_state)
 
-    print(game.get_assertions())
+    # print(game.get_assertions())
 
     start_time: float = time.time()
 
@@ -37,7 +37,7 @@ def run_n_random_games(number: int) -> None:
 
 
 def main() -> None:
-    run_game(example_game(2))
+    run_game(example_game(11))
     # run_game(example_game(2))
     # run_game(example_game(3))
     # run_game(example_game(4))

@@ -87,3 +87,12 @@ class TricksEquallyDistributed(SpecialTask):
             "At any time, a player must not have "
             "won two more tricks than any other player."
         )
+
+
+class PlayerWinsExactlyOneTrick(SpecialTask):
+    def __init__(self, player: Player):
+        self.player = player
+        super().__init__(
+            f"Player {player} has to win exactly one trick. "
+            f"This trick must not be won with a trump card"
+        )

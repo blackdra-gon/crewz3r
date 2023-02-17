@@ -6,6 +6,7 @@ from crew_tasks import (
     AssignTrickToPlayer,
     NoTricksWithValueTask,
     NullGame,
+    PlayerWinsExactlyOneTrick,
     Task,
     TricksEquallyDistributed,
     WinTricksWithSpecificValues,
@@ -35,6 +36,7 @@ from z3 import (
     ModelRef,
     Or,
     Solver,
+    SolverFor,
     sat,
 )
 
@@ -119,7 +121,7 @@ class CrewGameBase:
             Int(f"w_{i}") for i in range(1, self.NUMBER_OF_TRICKS + 1)
         ]
 
-        self.solver: Solver = Solver()
+        self.solver: Solver = SolverFor("QF_FD")
 
         # Each card may occur only once.
         self.solver.add(
@@ -405,6 +407,9 @@ class CrewGame(CrewGameBase):
                     self.add_special_task_all_trumps_win(special_task.in_order)
                 case TricksEquallyDistributed.__name__:
                     self.add_special_task_tricks_equally_distributed()
+                case PlayerWinsExactlyOneTrick.__name__:
+                    special_task: PlayerWinsExactlyOneTrick
+                    self.add_special_task_exactly_one_trick(special_task.player)
                 case _:
                     raise NotImplementedError(type(special_task).__name__)
 
@@ -523,6 +528,10 @@ class CrewGame(CrewGameBase):
         # idea: we could use this Int Variable to print task completion markers
         trick_number_helper_variables = [Int(f"helper_{i}") for i in range(number)]
         self.solver.add(Distinct(trick_number_helper_variables))
+        self.solver.add([0 <= helper for helper in trick_number_helper_variables])
+        self.solver.add(
+            [helper < self.NUMBER_OF_TRICKS for helper in trick_number_helper_variables]
+        )
         self.solver.add(
             And(
                 [
@@ -557,3 +566,17 @@ class CrewGame(CrewGameBase):
         number_of_blocks = math.ceil(self.NUMBER_OF_TRICKS / p)
         for i in range(0, number_of_blocks * p, p):
             self.solver.add(Distinct(self.trick_winners[i : i + p]))
+
+    def add_special_task_exactly_one_trick(self, player: Player):
+        trick_helper_var = Int("helper")
+        self.solver.add(trick_helper_var >= 0)
+        self.solver.add(trick_helper_var < self.NUMBER_OF_TRICKS)
+        self.solver.add(
+            [
+                Implies(
+                    self.trick_winners[j] == player,
+                    And(trick_helper_var == j, self.cards[j][player - 1][0] != -1),
+                )
+                for j in range(self.NUMBER_OF_TRICKS)
+            ]
+        )
