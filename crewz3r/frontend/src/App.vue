@@ -6,36 +6,20 @@ import { RouterView } from 'vue-router'
 import { io } from 'socket.io-client'
 import {VueCookies} from "vue-cookies";
 
-const socket = io(":5000");
 
 const users = ref([]);
 
-
+const socket = io(":5000", {
+  withCredentials: true
+});
 
 
 // Set cookie
 const $cookies = inject<VueCookies>('$cookies');
-let user_id: unknown = "1";
-if (!$cookies.isKey('crewz3r_id')) {
-  (async function() {
-  const getCookieId = () => new Promise(resolve => {
-      socket.emit('new cookie required');
-      socket.on('cookie value', response => {
-        resolve(response);
+
+socket.on('cookie value', (cookie_value) => {
+        $cookies.set('crewz3r_id', cookie_value);
       });
-
-  });
-
-  user_id = await getCookieId(); // Waits here until it is done.
-  $cookies.set('crewz3r_id', user_id)
-
-  }());
-}
-
-// Connect to Backend-Server
-socket.emit('connect backend', $cookies.get('crewz3r_id'))
-
-
 
 socket.on("user list", (user_string) => {
   const user_obj = JSON.parse(user_string);

@@ -82,44 +82,42 @@ def card_string(card: Card) -> str:
 # ***********************************************************
 
 
-@socketio.on("connect backend")
-def connect_backend(cookie: str) -> None:
+@socketio.on("connect")
+def connect() -> None:
 
     global users
 
-    uid: str = cookie
+    uid: str = request.cookies.get("crewz3r_id")
+    if not uid:
+        cookie_value = str(uuid.uuid4())
+        emit("cookie value", cookie_value)
+        uid = cookie_value
     if uid not in users:
         users[uid] = User(uid, "", UserStatus.CONNECTED)
         print(f"New connection: {uid}, user count: {len(users)}.")
     else:
         print(f"User {users[uid].name} ({uid}) reconnected")
     print("Users:", users, sep="\n")
-    # TODO: route to the right page
-    # match users[uid].status:
-    #     case UserStatus.CARD_SELECTION:
-    #         emit("open card selection view")
-    #         emit("cards updated", json.dumps(list(all_possible_cards)))
-    #         emit(
-    #             "set card selection checkboxes",
-    #             json.dumps(card_distribution[users[uid].player_index]),
-    #         )
-    #     case UserStatus.TASK_SELECTION:
-    #         emit("open task selection view")
-    #         emit("cards updated", json.dumps(list(all_possible_tasks)))
-    #     case UserStatus.TASK_SELECTION_FINISHED:
-    #         emit("open task selection view")
-    #         emit("cards updated", json.dumps(list(all_possible_tasks)))
-    #     case UserStatus.AWAITING_RESULT:
-    #         emit("open result view")
-    #     case _:
-    #         pass
+    match users[uid].status:
+        case UserStatus.CARD_SELECTION:
+            emit("open card selection view")
+            emit("cards updated", json.dumps(list(all_possible_cards)))
+            emit(
+                "set card selection checkboxes",
+                json.dumps(card_distribution[users[uid].player_index]),
+            )
+        case UserStatus.TASK_SELECTION:
+            emit("open task selection view")
+            emit("cards updated", json.dumps(list(all_possible_tasks)))
+        case UserStatus.TASK_SELECTION_FINISHED:
+            emit("open task selection view")
+            emit("cards updated", json.dumps(list(all_possible_tasks)))
+        case UserStatus.AWAITING_RESULT:
+            emit("open result view")
+        case _:
+            pass
 
     send_user_list()
-
-
-@socketio.on("connect")
-def connect() -> None:
-    print("Connection to frontend server established")
 
 
 @socketio.on("update name")
