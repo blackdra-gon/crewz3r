@@ -72,7 +72,7 @@ consistent code style. For editor/IDE integration, see
 
 1. Install nodejs 16
 2. `npm install` to install dependencies
-3. npm run dev to start server
+3. `npm run dev` to start server
 
 ```
 pip install pre-commit

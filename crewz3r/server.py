@@ -354,6 +354,12 @@ def disconnect() -> None:
     send_user_list()
 
 
+@socketio.on("new cookie required")
+def new_cookie_required():
+    cookie_value = str(uuid.uuid4())
+    emit("cookie value", cookie_value)
+
+
 @app.route("/")
 def index() -> str:
     resp = make_response(render_template("index.html"))
