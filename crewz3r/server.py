@@ -82,38 +82,44 @@ def card_string(card: Card) -> str:
 # ***********************************************************
 
 
-@socketio.on("connect")
-def connect() -> None:
+@socketio.on("connect backend")
+def connect_backend(cookie: str) -> None:
 
     global users
 
-    uid: str = request.cookies.get("crewz3r_id")
+    uid: str = cookie
     if uid not in users:
         users[uid] = User(uid, "", UserStatus.CONNECTED)
         print(f"New connection: {uid}, user count: {len(users)}.")
     else:
         print(f"User {users[uid].name} ({uid}) reconnected")
     print("Users:", users, sep="\n")
-    match users[uid].status:
-        case UserStatus.CARD_SELECTION:
-            emit("open card selection view")
-            emit("cards updated", json.dumps(list(all_possible_cards)))
-            emit(
-                "set card selection checkboxes",
-                json.dumps(card_distribution[users[uid].player_index]),
-            )
-        case UserStatus.TASK_SELECTION:
-            emit("open task selection view")
-            emit("cards updated", json.dumps(list(all_possible_tasks)))
-        case UserStatus.TASK_SELECTION_FINISHED:
-            emit("open task selection view")
-            emit("cards updated", json.dumps(list(all_possible_tasks)))
-        case UserStatus.AWAITING_RESULT:
-            emit("open result view")
-        case _:
-            pass
+    # TODO: route to the right page
+    # match users[uid].status:
+    #     case UserStatus.CARD_SELECTION:
+    #         emit("open card selection view")
+    #         emit("cards updated", json.dumps(list(all_possible_cards)))
+    #         emit(
+    #             "set card selection checkboxes",
+    #             json.dumps(card_distribution[users[uid].player_index]),
+    #         )
+    #     case UserStatus.TASK_SELECTION:
+    #         emit("open task selection view")
+    #         emit("cards updated", json.dumps(list(all_possible_tasks)))
+    #     case UserStatus.TASK_SELECTION_FINISHED:
+    #         emit("open task selection view")
+    #         emit("cards updated", json.dumps(list(all_possible_tasks)))
+    #     case UserStatus.AWAITING_RESULT:
+    #         emit("open result view")
+    #     case _:
+    #         pass
 
     send_user_list()
+
+
+@socketio.on("connect")
+def connect() -> None:
+    print("Connection to frontend server established")
 
 
 @socketio.on("update name")
@@ -338,20 +344,20 @@ def end_game() -> None:
     emit("game ended", broadcast=True)
 
 
-@socketio.on("disconnect")
-def disconnect() -> None:
-
-    global users, status_in_game
-
-    uid: str = request.cookies.get("crewz3r_id")
-
-    print(
-        f"User {users[uid].name!r} ({uid!r}) disconnected, "
-        + f"user count: {len(users) - 1}."
-    )
-    if not status_in_game:
-        users.pop(uid)
-    send_user_list()
+# @socketio.on("disconnect")
+# def disconnect() -> None:
+#
+#     global users, status_in_game
+#
+#     uid: str = request.cookies.get("crewz3r_id")
+#
+#     print(
+#         f"User {users[uid].name!r} ({uid!r}) disconnected, "
+#         + f"user count: {len(users) - 1}."
+#     )
+#     if not status_in_game:
+#         users.pop(uid)
+#     send_user_list()
 
 
 @socketio.on("new cookie required")

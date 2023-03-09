@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject } from 'vue'
+import {computed, inject, ref} from 'vue'
 import {VueCookies} from "vue-cookies";
 
 type Users = [{
@@ -8,7 +8,9 @@ type Users = [{
 
 const users: Users = inject('users')
 const $cookies = inject<VueCookies>('$cookies');
-const cookie_id: String = $cookies.get('crewz3r_id');
+const cookie_id = computed( () =>  {
+  return $cookies.get('crewz3r_id')  // cookies are not reactive, so displaying the newly set cookies requires page reload
+});
 </script>
 
 <template>

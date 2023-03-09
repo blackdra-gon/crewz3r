@@ -12,7 +12,7 @@ const users = ref([]);
 
 
 
-console.log("page loaded");
+
 // Set cookie
 const $cookies = inject<VueCookies>('$cookies');
 let user_id: unknown = "1";
@@ -31,6 +31,9 @@ if (!$cookies.isKey('crewz3r_id')) {
 
   }());
 }
+
+// Connect to Backend-Server
+socket.emit('connect backend', $cookies.get('crewz3r_id'))
 
 
 
