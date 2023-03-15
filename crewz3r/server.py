@@ -90,8 +90,11 @@ def connect() -> None:
     uid: str = request.cookies.get("crewz3r_id")
     if not uid:
         cookie_value = str(uuid.uuid4())
+        print("send cookie id:" + cookie_value)
         emit("cookie value", cookie_value)
         uid = cookie_value
+        print("connect without cookie")
+        return
     if uid not in users:
         users[uid] = User(uid, "", UserStatus.CONNECTED)
         print(f"New connection: {uid}, user count: {len(users)}.")
@@ -372,6 +375,15 @@ def index() -> str:
         resp.set_cookie("crewz3r_id", str(uuid.uuid4()), httponly=True)
 
     return resp
+
+
+@app.route("/cookie")
+def send_cookie():
+    response = make_response(str(uuid.uuid4()))
+    response.headers.add("Access-Control-Allow-Origin", "*")
+
+    print("cookie")
+    return response
 
 
 def main() -> None:
