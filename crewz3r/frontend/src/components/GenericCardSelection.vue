@@ -99,13 +99,27 @@ const add_tab_for_color = (color_name) => {
 };
 
 onMounted( () => {
-for (const color of get_unique_colors_of_cards()) {
-    //const color_element = document.createElement('p')
-    //color_element.innerText = color
-    //document.getElementById("card_selection_form").appendChild(color_element)
-    add_tab_for_color(color);
-  }
-  document.querySelector(".tab .tablink").click();
+    for (const color of get_unique_colors_of_cards()) {
+        //const color_element = document.createElement('p')
+        //color_element.innerText = color
+        //document.getElementById("card_selection_form").appendChild(color_element)
+        add_tab_for_color(color);
+    }
+    document.querySelector(".tab .tablink").click();
+    document.querySelectorAll(".tab").forEach((tab_element) => {
+        tab_element.addEventListener("click", ({target}) => {
+            if (target.classList.contains("tablink")) {
+                const tabContent = tab_element.parentNode.querySelector(
+                    `.tabcontent.tab_${target.dataset.target}`,
+                );
+
+                tabContent.parentNode.childNodes.forEach((el) =>
+                    el.classList?.remove("active"),
+                );
+                tabContent.classList.add("active");
+            }
+        });
+    });
 })
 </script>
 
@@ -117,7 +131,7 @@ for (const color of get_unique_colors_of_cards()) {
         </form>
 </template>
 
-<style scoped>
+<style>
 
 :root {
     --card-width: 70px;

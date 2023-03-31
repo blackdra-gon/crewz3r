@@ -22,3 +22,6 @@ console.log(cards.length != 0)
         <div v-else>Lade Karten</div>
       </div>
 </template>
+
+<style>
+</style>

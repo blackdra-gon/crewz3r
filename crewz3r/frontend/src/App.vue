@@ -61,23 +61,6 @@ provide('cards', cards)
 </template>
 
 <style>
-:root {
-    --card-width: 70px;
-    --card-height: calc(70px / 0.65);
-    --card-trump: black;
-    --card-red: #ea5cb5;
-    --card-green: #66c75d;
-    --card-blue: #52c4b0;
-    --card-yellow: #e0ab2c;
-    --card-undefined: gray;
-    --card-color--1: var(--card-trump);
-    --card-color-0: var(--card-red);
-    --card-color-1: var(--card-green);
-    --card-color-2: var(--card-blue);
-    --card-color-3: var(--card-yellow);
-    --primary-color: #254a9a;
-    --task-order-color: #502891;
-}
 
 
 </style>
