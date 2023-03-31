@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import Lobby from '../components/Lobby.vue'
-import FormName from '../components/FormName.vue'
-import StartGameButton from '../components/StartGameButton.vue'
+import genericCardSelection from "../components/GenericCardSelection.vue";
+import GenericCardSelection from "../components/GenericCardSelection.vue";
 </script>
 
 <template>
@@ -14,10 +13,6 @@ import StartGameButton from '../components/StartGameButton.vue'
           <p>Um Karten hinzu zu fügen, nutze die Eingabeleiste unten</p>
           <div class="selected_cards card_list"></div>
         </div>
-        <form id="card_selection_form" class="card_selection_form">
-          <div class="tab">
-            <button type="submit" class="finish button">Auswahl beenden</button>
-          </div>
-        </form>
+        <generic-card-selection />
       </div>
 </template>

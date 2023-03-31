@@ -5,7 +5,7 @@
     const socket = inject('socket')
 
     const start_game = () => {
-        console.log("hallo", socket);
+        console.log("start game, socket object:", socket);
         socket.emit('start card selection')
     }
 

@@ -101,7 +101,7 @@ def connect() -> None:
     match users[uid].status:
         case UserStatus.CARD_SELECTION:
             emit("open card selection view")
-            emit("cards updated", json.dumps(list(all_possible_cards)))
+            emit("card list", json.dumps(list(all_possible_cards)))
             emit(
                 "set card selection checkboxes",
                 json.dumps(card_distribution[users[uid].player_index]),
@@ -164,7 +164,7 @@ def start_card_selection() -> None:
     print("Users:", users, sep="\n")
 
     emit("open card selection view", json.dumps(get_user_list()), broadcast=True)
-    emit("cards updated", json.dumps(list(all_possible_cards)), broadcast=True)
+    emit("card list", json.dumps(list(all_possible_cards)), broadcast=True)
 
 
 # ***********************************************************
