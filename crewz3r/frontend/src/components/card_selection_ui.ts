@@ -132,7 +132,7 @@ const add_tab_for_color = (color_name) => {
     number_input_type = "radio";
     prefix = "task_selection";
   }
-
+  let number;
   for (number of get_number_list_for_color(color_name)) {
     const color_number_checkbox = get_color_number_input(
       prefix,
