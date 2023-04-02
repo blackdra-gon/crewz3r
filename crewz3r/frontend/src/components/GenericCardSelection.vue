@@ -1,32 +1,24 @@
 <script setup lang="ts">
-import {inject, onMounted} from "vue";
+import {computed, inject, onMounted, ref} from "vue";
 
 //type Card = [number, number] // color / value
 
+const selected_cards = ref([])
+
 const cards/*: [Card]*/ = inject('cards')
 
-const get_unique_colors_of_cards = () => {
-  let colors = new Set();
+const color_list = computed(() => {
+    let colors = new Set();
 
   for (const card of cards) {
     colors.add(card[0]);
   }
 
   return Array.from(colors).sort();
-};
+});
 
-const get_color_tab_button = (color_name: string) => {
-  const tabButton = document.createElement("button");
-  tabButton.type = "button";
-  tabButton.classList.add("tablink");
-  tabButton.classList.add(`card_color_${color_name}`);
-  tabButton.dataset.target = color_name;
-
-  return tabButton;
-};
-
-const get_number_list_for_color = (card_color: number) => {
-  const numbers = new Set();
+const number_list = (card_color) => {
+      const numbers = new Set();
 
   for (const card of cards) {
     const color = card[0];
@@ -40,71 +32,7 @@ const get_number_list_for_color = (card_color: number) => {
   return Array.from(numbers).sort();
 };
 
-const get_color_tab_content_wrapper = (color_name: string) => {
-  const wrapper = document.createElement("div");
-  wrapper.classList.add("tabcontent");
-  wrapper.classList.add(`card_color_${color_name}`);
-  wrapper.classList.add(`tab_${color_name}`);
-
-  return wrapper;
-};
-
-const get_color_number_input = (
-  prefix: string,
-  color_name: string,
-  number: number,
-  type = "checkbox",
-) => {
-  const id = `${prefix}_${color_name}_${number}`;
-  const input = document.createElement("input");
-  input.id = id;
-  input.setAttribute("type", type);
-  input.setAttribute("name", color_name);
-  input.setAttribute("value", String(number));
-  input.classList.add("card_number");
-
-  const label = document.createElement("label");
-  label.setAttribute("for", id);
-  label.innerText = String(number);
-
-  const wrapper = document.createElement("div");
-  wrapper.classList.add("color_wrapper");
-  wrapper.appendChild(input);
-  wrapper.appendChild(label);
-
-  return wrapper;
-};
-
-const add_tab_for_color = (color_name) => {
-  let number_input_type = "checkbox";
-  let prefix = "card_selection";
-
-  const tab = document.querySelector(".tab");
-  const tab_button = get_color_tab_button(color_name);
-  const tab_content_wrapper = get_color_tab_content_wrapper(color_name);
-
-  let number;
-  for (number of get_number_list_for_color(color_name)) {
-    const color_number_checkbox = get_color_number_input(
-      prefix,
-      color_name,
-      number,
-      number_input_type,
-    );
-    tab_content_wrapper.appendChild(color_number_checkbox);
-  }
-
-  tab.appendChild(tab_button);
-  tab.after(tab_content_wrapper);
-};
-
 onMounted( () => {
-    for (const color of get_unique_colors_of_cards()) {
-        //const color_element = document.createElement('p')
-        //color_element.innerText = color
-        //document.getElementById("card_selection_form").appendChild(color_element)
-        add_tab_for_color(color);
-    }
     document.querySelector(".tab .tablink").click();
     document.querySelectorAll(".tab").forEach((tab_element) => {
         tab_element.addEventListener("click", ({target}) => {
@@ -126,9 +54,19 @@ onMounted( () => {
 <template>
 <form id="card_selection_form" class="card_selection_form">
           <div class="tab">
-            <button type="submit" class="finish button">Auswahl beenden</button>
+              <button v-for="color in color_list" type="button" class="tablink" :class="'card_color_'+color" v-bind:data-target="color"></button>
+              <button type="submit" class="finish button">Auswahl beenden</button>
+          </div>
+          <div v-for="color in color_list" class="tabcontent" :class="'tab_'+color, 'card_color_'+color">
+                <div v-for="number in number_list(color)" class="color_wrapper">
+                    <input  type="checkbox" v-bind:id="'prefix_'+color+'_'+number"
+                            v-bind:name="color" v-bind:value="'('+color+','+number+')'" class="card_number"
+                            v-model="selected_cards">
+                    <label v-bind:for="'prefix_'+color+'_'+number">{{number}}</label>
+                </div>
           </div>
         </form>
+  <div>Selected Cards: {{ selected_cards }}</div>
 </template>
 
 <style>
