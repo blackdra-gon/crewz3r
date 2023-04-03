@@ -163,8 +163,9 @@ def start_card_selection() -> None:
     print("Parameters:", game_parameters, sep="\n")
     print("Users:", users, sep="\n")
 
-    emit("open card selection view", json.dumps(get_user_list()), broadcast=True)
     emit("card list", json.dumps(list(all_possible_cards)), broadcast=True)
+    emit("task list", json.dumps(list(all_possible_tasks)), broadcast=True)
+    emit("open card selection view", json.dumps(get_user_list()), broadcast=True)
 
 
 # ***********************************************************

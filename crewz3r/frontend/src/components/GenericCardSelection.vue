@@ -3,6 +3,10 @@ import {computed, inject, onMounted, reactive, ref} from "vue";
 
 //type Card = [number, number] // color / value
 
+const socket = inject("socket");
+
+const emit = defineEmits(['selection_form_submit'])
+
 const selected_cards_strings = ref([])
 
 function stringToArray(str) {
@@ -20,7 +24,7 @@ const selected_cards = computed( () => {
     return selected_cards_array
 })
 
-const cards/*: [Card]*/ = inject('cards')
+const cards/*: [Card]*/ = inject('cards_for_selection')
 
 
 
@@ -65,6 +69,15 @@ onMounted( () => {
             }
         });
     });
+
+    document
+    .getElementById("card_selection_form")
+    .addEventListener("submit", (event) => {
+        event.preventDefault();
+        emit("selection_form_submit", selected_cards);
+    //socket.emit("finish card selection");
+  });
+
 })
 //v-bind:value="'('+color+','+number+')'"
 </script>

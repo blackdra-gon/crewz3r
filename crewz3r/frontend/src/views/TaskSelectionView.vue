@@ -2,17 +2,15 @@
 import GenericCardSelection from "../components/GenericCardSelection.vue";
 import {inject, provide, unref} from "vue";
 import {useRouter} from "vue-router";
-const cards = inject('cards');
+const tasks = inject('tasks');
 const socket = inject('socket');
 const router = useRouter()
-console.log(cards)
-console.log(cards.length != 0)
 
-provide('cards_for_selection', cards)
+provide("cards_for_selection", tasks)
 
 const selection_submit = (selected_cards) => {
-    socket.emit("cards selected", JSON.stringify(selected_cards.value));
-    router.push("../taskSelection")
+    //socket.emit("cards selected", JSON.stringify(selected_cards.value));
+    router.push("../taskOrderSelection")
 }
 </script>
 
@@ -22,11 +20,11 @@ const selection_submit = (selected_cards) => {
           Spiel abbrechen
         </button>
         <div class="card_deck">
-          <h2>Deine Karten</h2>
-          <p>Um Karten hinzu zu fügen, nutze die Eingabeleiste unten</p>
+          <h2>Deine Aufträge</h2>
+          <p>Um Aufträge hinzu zu fügen, nutze die Eingabeleiste unten</p>
           <div class="selected_cards card_list"></div>
         </div>
-        <div v-if="cards.length != 0">  <!-- wait for cards to be loaded -->
+        <div v-if="tasks.length != 0">  <!-- wait for cards to be loaded -->
         <generic-card-selection
           @selection_form_submit="selection_submit"
         />

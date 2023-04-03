@@ -12,6 +12,7 @@ const users = ref([]);
 type Card = [number, number] // color / value
 
 const cards = reactive([])
+const tasks = reactive([])
 
 const socket = io(":5000", {
   withCredentials: true
@@ -44,6 +45,11 @@ socket.on("card list", (cards_string) => {
   console.log(cards)
 });
 
+socket.on("task list", (cards_string) => {
+  const cards_obj = JSON.parse(cards_string);
+  for (const id in cards_obj) tasks.push(cards_obj[id])
+});
+
 socket.on("open card selection view", () => {
   router.push("/cardSelection");
   console.log("server: open card selection view")
@@ -54,6 +60,7 @@ socket.on("open card selection view", () => {
 provide('socket', socket)
 provide('users', users)
 provide('cards', cards)
+provide('tasks', tasks)
 </script>
 
 <template>
