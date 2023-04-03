@@ -1,11 +1,28 @@
 <script setup lang="ts">
-import {computed, inject, onMounted, ref} from "vue";
+import {computed, inject, onMounted, reactive, ref} from "vue";
 
 //type Card = [number, number] // color / value
 
-const selected_cards = ref([])
+const selected_cards_strings = ref([])
+
+function stringToArray(str) {
+  // Remove the square brackets from the string
+  str = str.slice(1, -1);
+  // Split the string by the comma and convert each element to a number
+  return str.split(",").map(Number);
+}
+
+const selected_cards = computed( () => {
+    const selected_cards_array = []
+    for (const card_string of selected_cards_strings.value) {
+        selected_cards_array.push(stringToArray(card_string))
+    }
+    return selected_cards_array
+})
 
 const cards/*: [Card]*/ = inject('cards')
+
+
 
 const color_list = computed(() => {
     let colors = new Set();
@@ -49,6 +66,7 @@ onMounted( () => {
         });
     });
 })
+//v-bind:value="'('+color+','+number+')'"
 </script>
 
 <template>
@@ -60,13 +78,14 @@ onMounted( () => {
           <div v-for="color in color_list" class="tabcontent" :class="'tab_'+color, 'card_color_'+color">
                 <div v-for="number in number_list(color)" class="color_wrapper">
                     <input  type="checkbox" v-bind:id="'prefix_'+color+'_'+number"
-                            v-bind:name="color" v-bind:value="'('+color+','+number+')'" class="card_number"
-                            v-model="selected_cards">
+                            v-bind:name="color" class="card_number" v-bind:value="'['+color+','+number+']'"
+                            v-model="selected_cards_strings">
                     <label v-bind:for="'prefix_'+color+'_'+number">{{number}}</label>
                 </div>
           </div>
         </form>
-  <div>Selected Cards: {{ selected_cards }}</div>
+  <div>Selected Cards: {{ selected_cards_strings }}</div>
+  <p> Selected Cards Array: {{ selected_cards }}</p>
 </template>
 
 <style>
