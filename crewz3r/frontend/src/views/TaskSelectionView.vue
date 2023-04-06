@@ -2,7 +2,9 @@
 import GenericCardSelection from "../components/GenericCardSelection.vue";
 import {inject, provide, unref} from "vue";
 import {useRouter} from "vue-router";
+
 const tasks = inject('tasks');
+const selected_tasks = inject('selected_tasks')
 const socket = inject('socket');
 const router = useRouter()
 
@@ -10,6 +12,7 @@ provide("cards_for_selection", tasks)
 
 const selection_submit = (selected_cards) => {
     //socket.emit("cards selected", JSON.stringify(selected_cards.value));
+    selected_tasks.value = selected_cards.value;
     router.push("../taskOrderSelection")
 }
 </script>
@@ -24,12 +27,11 @@ const selection_submit = (selected_cards) => {
           <p>Um Aufträge hinzu zu fügen, nutze die Eingabeleiste unten</p>
           <div class="selected_cards card_list"></div>
         </div>
-        <div v-if="tasks.length != 0">  <!-- wait for cards to be loaded -->
+        <div>
         <generic-card-selection
           @selection_form_submit="selection_submit"
         />
         </div>
-        <div v-else>Lade Karten</div>
       </div>
 </template>
 

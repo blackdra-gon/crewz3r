@@ -14,6 +14,8 @@ type Card = [number, number] // color / value
 const cards = reactive([])
 const tasks = reactive([])
 
+const selected_tasks = ref([])
+
 const socket = io(":5000", {
   withCredentials: true
 });
@@ -61,6 +63,7 @@ provide('socket', socket)
 provide('users', users)
 provide('cards', cards)
 provide('tasks', tasks)
+provide('selected_tasks', selected_tasks)
 </script>
 
 <template>

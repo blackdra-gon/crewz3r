@@ -8,6 +8,8 @@ from crew_tasks import Task
 from crew_types import Card, CardDistribution
 from crew_utils import (
     DEFAULT_PARAMETERS,
+    FIVE_PLAYER_PARAMETERS,
+    THREE_PLAYER_PARAMETERS,
     CrewGameParameters,
     CrewGameState,
     get_deck,
@@ -102,6 +104,7 @@ def connect() -> None:
         case UserStatus.CARD_SELECTION:
             emit("open card selection view")
             emit("card list", json.dumps(list(all_possible_cards)))
+            emit("task list", json.dumps(list(all_possible_tasks)))
             emit(
                 "set card selection checkboxes",
                 json.dumps(card_distribution[users[uid].player_index]),
@@ -140,14 +143,18 @@ def start_card_selection() -> None:
     status_in_game = True
     player_count = len(users)
     game_parameters = DEFAULT_PARAMETERS
-    try:
-        game_parameters.number_of_players = player_count
-    except ValueError:  # as e:
-        # print(f"Invalid player count:\n{e!r}")
-        # emit("not enough players")
-        # return
-        # for development it should be possible to start a game with one player:
-        pass
+    if player_count == 3:
+        game_parameters = THREE_PLAYER_PARAMETERS
+    if player_count == 5:
+        game_parameters = FIVE_PLAYER_PARAMETERS
+    # try:
+    #    game_parameters.number_of_players = player_count
+    # except ValueError:  # as e:
+    # print(f"Invalid player count:\n{e!r}")
+    # emit("not enough players")
+    # return
+    # for development it should be possible to start a game with one player:
+    #    pass
 
     all_possible_cards = get_deck(game_parameters)
     all_unselected_cards = all_possible_cards
@@ -226,32 +233,100 @@ def cards_selected(card_list_str: str):
     print("Card distribution:", card_distribution, sep="\n")
 
 
+def string_to_int_if_possible(input: str):
+    ret = input
+    try:
+        ret = int(ret)
+    finally:
+        return ret
+
+
+# string_to_int = lambda x: try: int(x)
+#                            finally: return x
+
+
+def order_constraint_from_str(string):
+    order_constraint = 0
+    relative_constraint = False
+    match string:
+        case 1 | 2 | 3 | 4 | 5 | -1:
+            order_constraint = string
+        case "❯" | "❯❯" | "❯❯❯" | "❯❯❯❯":
+            order_constraint = len(string)
+            relative_constraint = True
+        case "Ω":
+            order_constraint = -1
+    return order_constraint, relative_constraint
+
+
+@socketio.on("tasks selected")
+def tasks_selected(task_list_str: str):
+
+    global card_distribution
+
+    uid: str = request.cookies.get("crewz3r_id")
+    user = users[uid]
+    player = user.player_index
+    if users[uid].status == UserStatus.CARD_SELECTION:
+        users[uid].status = UserStatus.TASK_SELECTION_FINISHED
+        print(f"User {users[uid].name!r} ({uid!r}) finished task selection.")
+
+    for task in json.loads(task_list_str):
+        task_list = task.split(",")
+        task_list = [string_to_int_if_possible(element) for element in task_list]
+        card = tuple(task_list[:2])
+        order_constraint, relative_constraint = order_constraint_from_str(task_list[2])
+        chosen_tasks.append(
+            Task(card, player + 1, order_constraint, relative_constraint)
+        )
+    print(chosen_tasks)
+
+    if all(u.status == UserStatus.TASK_SELECTION_FINISHED for u in users.values()):
+        print("Task selection finished for all users.")
+        if no_card_duplicates(card_distribution) and no_task_duplicates(chosen_tasks):
+            for user in users.values():
+                if user.status == UserStatus.TASK_SELECTION_FINISHED:
+                    user.status = UserStatus.AWAITING_RESULT
+
+        print("Starting solver.")
+        game_state = CrewGameState(card_distribution, tasks=chosen_tasks)
+        game = CrewGame(game_parameters, game_state)
+        game.solve()
+        print_initial_game_state(game_parameters, game_state)
+        if game.has_solution():
+            print_solution(game.get_solution())
+        else:
+            print("No solution exists.")
+
+    # chosen_tasks.append(Task(card, player + 1))
+
+
 # To be removed, when the client requests the cards updated event
 task_selection_already_loaded: bool = False
 
 
-@socketio.on("finish card selection")
-def finish_card_selection() -> None:
-
-    global all_possible_cards, card_distribution, task_selection_already_loaded
-
-    uid: str = request.cookies.get("crewz3r_id")
-
-    if users[uid].status == UserStatus.CARD_SELECTION:
-        users[uid].status = UserStatus.TASK_SELECTION
-        print(f"User {users[uid].name!r} ({uid!r}) finished card selection.")
-
-        print(f"User {users[uid].name!r} ({uid!r}) starts task selection.")
-        # print("Users:", users, sep="\n")
-
-        emit("open task selection view")
-        if not task_selection_already_loaded:
-            emit("cards updated", json.dumps(list(all_possible_tasks)))
-            task_selection_already_loaded = True
-        # TODO send selected cards
-        # else:
-        #    print("ERROR: duplicate cards.")
-        #    emit("end game")
+# @socketio.on("finish card selection")
+# def finish_card_selection() -> None:
+#
+#     global all_possible_cards, card_distribution, task_selection_already_loaded
+#
+#     uid: str = request.cookies.get("crewz3r_id")
+#
+#     if users[uid].status == UserStatus.CARD_SELECTION:
+#         users[uid].status = UserStatus.TASK_SELECTION
+#         print(f"User {users[uid].name!r} ({uid!r}) finished card selection.")
+#
+#         print(f"User {users[uid].name!r} ({uid!r}) starts task selection.")
+#         # print("Users:", users, sep="\n")
+#
+#         emit("open task selection view")
+#         if not task_selection_already_loaded:
+#             emit("cards updated", json.dumps(list(all_possible_tasks)))
+#             task_selection_already_loaded = True
+#         # TODO send selected cards
+#         # else:
+#         #    print("ERROR: duplicate cards.")
+#         #    emit("end game")
 
 
 @socketio.on("task taken")
