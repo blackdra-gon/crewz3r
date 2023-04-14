@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import {inject, onMounted, ref} from "vue";
+import {useRouter} from "vue-router";
 
 const socket = inject('socket')
 const selected_tasks = inject('selected_tasks')
+const router = useRouter()
 
 const symbols = [
     "Kein",
@@ -28,6 +30,7 @@ for (const task of selected_tasks.value) {
 
 const submit = () => {
     socket.emit("tasks selected", JSON.stringify(tasks_with_order.value));
+    router.push('../result');
 }
 onMounted( () => {
     document.querySelector(".task_wrapper")
