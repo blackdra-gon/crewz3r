@@ -28,6 +28,7 @@ const $cookies = inject<VueCookies>('$cookies');
 
 socket.on('cookie value', (cookie_value) => {
         $cookies.set('crewz3r_id', cookie_value);
+        window.location.reload()
       });
 
 socket.on("user list", (user_string) => {
