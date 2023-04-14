@@ -24,6 +24,7 @@ from crew_utils import (
     CrewGameTrick,
     deal_cards,
     no_card_duplicates,
+    valid_order_constraints,
 )
 from z3 import (
     And,
@@ -352,11 +353,10 @@ class CrewGame(CrewGameBase):
             raise ValueError("Invalid parameters.")
 
         # All task order constraints must be of the same type.
-        constraint_types: list[bool] = [
-            t.relative_constraint for t in initial_state.tasks if t.order_constraint
-        ]
-        if not (all(constraint_types) or not any(constraint_types)):
-            raise ValueError("Mixed task order constraint types.")
+        if not valid_order_constraints(initial_state.tasks):
+            raise ValueError(
+                "Duplicate order constraints or mixed task order " "constraint types."
+            )
 
         super().__init__(parameters, initial_state)
 

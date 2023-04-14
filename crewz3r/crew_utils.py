@@ -183,6 +183,20 @@ def no_task_duplicates(task_list: list[Task]) -> bool:
     return True
 
 
+def valid_order_constraints(task_list: list[Task]) -> bool:
+    order_constraints = []
+    # check for duplicate constraint numbers
+    for task in task_list:
+        if task.order_constraint in order_constraints:
+            return False
+        order_constraints.append(task.order_constraint)
+    # check for mixed absolute and relative constraints
+    constraint_types: list[bool] = [
+        t.relative_constraint for t in task_list if t.order_constraint
+    ]
+    return all(constraint_types) or not any(constraint_types)
+
+
 # counted from 1
 def get_captain_index(
     cards: CardDistribution, parameters: CrewGameParameters

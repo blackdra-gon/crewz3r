@@ -16,8 +16,9 @@ from crew_utils import (
     get_deck_without_trump,
     no_card_duplicates,
     no_task_duplicates,
+    valid_order_constraints,
 )
-from flask import Flask, make_response, render_template, request
+from flask import Flask, request
 from flask_socketio import SocketIO, emit
 
 from crewz3r.crew_print import print_initial_game_state, print_solution
@@ -77,6 +78,47 @@ def send_user_list() -> None:
 
 def card_string(card: Card) -> str:
     return f"({COLOUR_NAMES[card[0]]}, {card[1]})"
+
+
+def string_to_int_if_possible(element: str):
+    try:
+        element = int(element)
+    finally:
+        return element
+
+
+def order_constraint_from_str(string):
+    order_constraint = 0
+    relative_constraint = False
+    match string:
+        case 1 | 2 | 3 | 4 | 5 | -1:
+            order_constraint = string
+        case "❯" | "❯❯" | "❯❯❯" | "❯❯❯❯":
+            order_constraint = len(string)
+            relative_constraint = True
+        case "Ω":
+            order_constraint = -1
+    return order_constraint, relative_constraint
+
+
+def valid_cards_and_tasks() -> bool:
+    return (
+        no_card_duplicates(card_distribution)
+        and no_task_duplicates(chosen_tasks)
+        and valid_order_constraints(chosen_tasks)
+    )
+
+
+def start_solver():
+    print("Starting solver.")
+    game_state = CrewGameState(card_distribution, tasks=chosen_tasks)
+    game = CrewGame(game_parameters, game_state)
+    game.solve()
+    print_initial_game_state(game_parameters, game_state)
+    if game.has_solution():
+        print_solution(game.get_solution())
+    else:
+        print("No solution exists.")
 
 
 # ***********************************************************
@@ -172,51 +214,12 @@ def start_card_selection() -> None:
 
     emit("card list", json.dumps(list(all_possible_cards)), broadcast=True)
     emit("task list", json.dumps(list(all_possible_tasks)), broadcast=True)
-    emit("open card selection view", json.dumps(get_user_list()), broadcast=True)
+    emit("open card selection view", broadcast=True)
 
 
 # ***********************************************************
 #        card selection
 # ***********************************************************
-
-# when one player adds a card to its deck remove it from possible cards
-@socketio.on("card_or_task taken")
-def card_or_task_taken(card_str: str) -> None:
-    uid: str = request.cookies.get("crewz3r_id")
-    user = users[uid]
-    card: Card = tuple(json.loads(card_str))
-
-    if user.status == UserStatus.CARD_SELECTION:
-        card_taken(card, user)
-    elif user.status == UserStatus.TASK_SELECTION:
-        task_taken(card, user)
-    else:
-        print(
-            f"Warning: {user.name} ({user.uid}) "
-            + f"tried to take a card in status {user.status}"
-        )
-
-
-def card_taken(card: Card, user: User) -> None:
-
-    global all_possible_cards, card_distribution, all_unselected_cards
-
-    if card not in all_unselected_cards:
-        print(f"Unavailable card {card} was taken by {user.name} ({user.sid}).")
-        return
-
-    player = user.player_index
-
-    all_unselected_cards.remove(card)
-    # TODO check if we still need this
-    # emit("cards updated", json.dumps(list(all_possible_cards)), broadcast=True)
-
-    card_distribution[player].append(card)
-
-    print(f"Card {card} was taken by {user.name} ({user.sid}).")
-    print("Card distribution:", card_distribution, sep="\n")
-
-    emit("selected cards updated", json.dumps(card_distribution[player]))
 
 
 @socketio.on("cards selected")
@@ -231,32 +234,6 @@ def cards_selected(card_list_str: str):
     card_distribution[player] = card_list
 
     print("Card distribution:", card_distribution, sep="\n")
-
-
-def string_to_int_if_possible(input: str):
-    ret = input
-    try:
-        ret = int(ret)
-    finally:
-        return ret
-
-
-# string_to_int = lambda x: try: int(x)
-#                            finally: return x
-
-
-def order_constraint_from_str(string):
-    order_constraint = 0
-    relative_constraint = False
-    match string:
-        case 1 | 2 | 3 | 4 | 5 | -1:
-            order_constraint = string
-        case "❯" | "❯❯" | "❯❯❯" | "❯❯❯❯":
-            order_constraint = len(string)
-            relative_constraint = True
-        case "Ω":
-            order_constraint = -1
-    return order_constraint, relative_constraint
 
 
 @socketio.on("tasks selected")
@@ -283,116 +260,19 @@ def tasks_selected(task_list_str: str):
 
     if all(u.status == UserStatus.TASK_SELECTION_FINISHED for u in users.values()):
         print("Task selection finished for all users.")
-        if no_card_duplicates(card_distribution) and no_task_duplicates(chosen_tasks):
+        if valid_cards_and_tasks():
             for user in users.values():
                 if user.status == UserStatus.TASK_SELECTION_FINISHED:
                     user.status = UserStatus.AWAITING_RESULT
-
-        print("Starting solver.")
-        game_state = CrewGameState(card_distribution, tasks=chosen_tasks)
-        game = CrewGame(game_parameters, game_state)
-        game.solve()
-        print_initial_game_state(game_parameters, game_state)
-        if game.has_solution():
-            print_solution(game.get_solution())
+            start_solver()
         else:
-            print("No solution exists.")
-
-    # chosen_tasks.append(Task(card, player + 1))
-
-
-# To be removed, when the client requests the cards updated event
-task_selection_already_loaded: bool = False
-
-
-# @socketio.on("finish card selection")
-# def finish_card_selection() -> None:
-#
-#     global all_possible_cards, card_distribution, task_selection_already_loaded
-#
-#     uid: str = request.cookies.get("crewz3r_id")
-#
-#     if users[uid].status == UserStatus.CARD_SELECTION:
-#         users[uid].status = UserStatus.TASK_SELECTION
-#         print(f"User {users[uid].name!r} ({uid!r}) finished card selection.")
-#
-#         print(f"User {users[uid].name!r} ({uid!r}) starts task selection.")
-#         # print("Users:", users, sep="\n")
-#
-#         emit("open task selection view")
-#         if not task_selection_already_loaded:
-#             emit("cards updated", json.dumps(list(all_possible_tasks)))
-#             task_selection_already_loaded = True
-#         # TODO send selected cards
-#         # else:
-#         #    print("ERROR: duplicate cards.")
-#         #    emit("end game")
-
-
-@socketio.on("task taken")
-def task_taken(card: Card, user: User) -> None:
-    global all_possible_tasks, chosen_tasks
-
-    if card not in all_possible_tasks:
-        print(f"Unavailable task {card} was taken by {user.name} ({user.sid}).")
-        return
-
-    player = user.player_index
-
-    all_possible_tasks.remove(card)
-    # TODO check if we still need this
-    # emit("cards updated", json.dumps(list(all_possible_tasks)), broadcast=True)
-
-    chosen_tasks.append(Task(card, player + 1))
-
-    print(f"Task {card} was taken by {user.name} ({user.sid}).")
-    print("Chosen tasks:", chosen_tasks, sep="\n")
-
-    emit("selected tasks updated", json.dumps(chosen_tasks[player]))
-
-
-@socketio.on("back to card selection")
-def back_to_card_selection() -> None:
-    uid: str = request.cookies.get("crewz3r_id")
-    if users[uid].status == UserStatus.TASK_SELECTION:
-        users[uid].status = UserStatus.CARD_SELECTION
-    print(f"User {users[uid].name!r} ({uid!r}) goes back to card selection.")
-    emit("open card selection view")
-    # emit("cards updated", json.dumps(list(all_possible_cards)))
-
-
-@socketio.on("finish task selection")
-def finish_task_selection() -> None:
-
-    global card_distribution, game_parameters
-
-    uid: str = request.cookies.get("crewz3r_id")
-
-    if users[uid].status == UserStatus.TASK_SELECTION:
-        users[uid].status = UserStatus.TASK_SELECTION_FINISHED
-        print(f"User {users[uid].name!r} ({uid!r}) finished task selection.")
-
-    if all(u.status == UserStatus.TASK_SELECTION_FINISHED for u in users.values()):
-        print("Task selection finished for all users.")
-        if no_card_duplicates(card_distribution) and no_task_duplicates(chosen_tasks):
+            print(
+                "Invalid card or task selection. "
+                "Players should check their selection"
+            )
             for user in users.values():
-                if user.status == UserStatus.TASK_SELECTION_FINISHED:
-                    user.status = UserStatus.AWAITING_RESULT
-
-            emit("open result view", broadcast=True)
-            print("Starting solver.")
-            game_state = CrewGameState(card_distribution, tasks=chosen_tasks)
-            game = CrewGame(game_parameters, game_state)
-            game.solve()
-            print_initial_game_state(game_parameters, game_state)
-            if game.has_solution():
-                print_solution(game.get_solution())
-            else:
-                print("No solution exists.")
-
-        else:
-            print("ERROR: duplicate tasks.")
-            emit("end game")
+                user.status = UserStatus.CARD_SELECTION
+            emit("invalid card or task selection", broadcast=True)
 
 
 @socketio.on("end game")
@@ -438,16 +318,6 @@ def end_game() -> None:
 def new_cookie_required():
     cookie_value = str(uuid.uuid4())
     emit("cookie value", cookie_value)
-
-
-@app.route("/")
-def index() -> str:
-    resp = make_response(render_template("index.html"))
-
-    if request.cookies.get("crewz3r_id") is None:
-        resp.set_cookie("crewz3r_id", str(uuid.uuid4()), httponly=True)
-
-    return resp
 
 
 def main() -> None:
