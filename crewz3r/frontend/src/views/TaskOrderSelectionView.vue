@@ -28,9 +28,11 @@ for (const task of selected_tasks.value) {
     tasks_with_order.value.push(task + ',Kein')
 }
 
+
+
 const submit = () => {
     socket.emit("tasks selected", JSON.stringify(tasks_with_order.value));
-    router.push('../result');
+    //router.push('../result');
 }
 onMounted( () => {
     document.querySelector(".task_wrapper")
@@ -47,6 +49,11 @@ onMounted( () => {
                     tabContent.classList.add("active");
         });
     });
+    const error_message = document.querySelector(".error_message");
+    socket.on("invalid card or task selection", () => {
+        //console.log(document.querySelector(".error_message"));
+        error_message.classList.add("active")
+    });
 });
 </script>
 
@@ -55,6 +62,9 @@ onMounted( () => {
     <p>{{tasks_with_order}}</p>
 <p>
  <button class="button" @click="submit">Auswahl beenden</button>
+</p>
+<p id="invalid_input_message" class="error_message">
+    Es gibt einen Fehler bei der Eingabe der Karten oder Aufträge. Bitte überprüfe deine Eingabe.
 </p>
 <div class="selected_tasks_wrapper">
     <button v-for="card in selected_tasks" class="card selected_tasks" v-bind:name="card[0]+'_'+card[1]" v-bind:data-color="card[0]"> {{card[1]}}</button>
@@ -85,6 +95,15 @@ onMounted( () => {
 }
 
 .task_wrapper.active {
+    display: block;
+}
+
+.error_message {
+    display: none;
+    color: red;
+}
+
+.error_message.active {
     display: block;
 }
 
