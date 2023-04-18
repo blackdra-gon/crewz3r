@@ -53,10 +53,14 @@ socket.on("task list", (cards_string) => {
   for (const id in cards_obj) tasks.push(cards_obj[id])
 });
 
-socket.on("open card selection view", () => {
-  router.push("/cardSelection");
-  console.log("server: open card selection view")
-});
+socket.on("open view", (view_name) => {
+    console.log("server: open view " + view_name)
+    router.push("/" + view_name)
+})
+
+socket.on("game ended", () => {
+    router.push("/")
+})
 
 
 

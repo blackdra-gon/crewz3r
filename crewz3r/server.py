@@ -28,8 +28,6 @@ class UserStatus(Enum):
     CONNECTED = auto()
     CARD_SELECTION = auto()
     CARD_SELECTION_FINISHED = auto()
-    TASK_SELECTION = auto()
-    TASK_SELECTION_FINISHED = auto()
     AWAITING_RESULT = auto()
 
 
@@ -113,11 +111,13 @@ def start_solver():
     print("Starting solver.")
     game_state = CrewGameState(card_distribution, tasks=chosen_tasks)
     game = CrewGame(game_parameters, game_state)
-    game.solve()
     print_initial_game_state(game_parameters, game_state)
+    game.solve()
     if game.has_solution():
+        emit("game solved", True, broadcast=True)
         print_solution(game.get_solution())
     else:
+        emit("game solved", False, broadcast=True)
         print("No solution exists.")
 
 
@@ -143,22 +143,14 @@ def connect() -> None:
         print(f"User {users[uid].name} ({uid}) reconnected")
     print("Users:", users, sep="\n")
     match users[uid].status:
+        case UserStatus.CONNECTED:
+            emit("open view", "")
         case UserStatus.CARD_SELECTION:
-            emit("open card selection view")
+            emit("open view", "cardSelection")
             emit("card list", json.dumps(list(all_possible_cards)))
             emit("task list", json.dumps(list(all_possible_tasks)))
-            emit(
-                "set card selection checkboxes",
-                json.dumps(card_distribution[users[uid].player_index]),
-            )
-        case UserStatus.TASK_SELECTION:
-            emit("open task selection view")
-            emit("cards updated", json.dumps(list(all_possible_tasks)))
-        case UserStatus.TASK_SELECTION_FINISHED:
-            emit("open task selection view")
-            emit("cards updated", json.dumps(list(all_possible_tasks)))
         case UserStatus.AWAITING_RESULT:
-            emit("open result view")
+            emit("open view", "result")
         case _:
             pass
 
@@ -214,7 +206,7 @@ def start_card_selection() -> None:
 
     emit("card list", json.dumps(list(all_possible_cards)), broadcast=True)
     emit("task list", json.dumps(list(all_possible_tasks)), broadcast=True)
-    emit("open card selection view", broadcast=True)
+    emit("open view", "cardSelection", broadcast=True)
 
 
 # ***********************************************************
@@ -244,8 +236,10 @@ def tasks_selected(task_list_str: str):
     uid: str = request.cookies.get("crewz3r_id")
     user = users[uid]
     player = user.player_index
+    # Remove previous task selections from this player
+    chosen_tasks[:] = [task for task in chosen_tasks if task.player - 1 != player]
     if users[uid].status == UserStatus.CARD_SELECTION:
-        users[uid].status = UserStatus.TASK_SELECTION_FINISHED
+        users[uid].status = UserStatus.CARD_SELECTION_FINISHED
         print(f"User {users[uid].name!r} ({uid!r}) finished task selection.")
 
     for task in json.loads(task_list_str):
@@ -258,12 +252,13 @@ def tasks_selected(task_list_str: str):
         )
     print(chosen_tasks)
 
-    if all(u.status == UserStatus.TASK_SELECTION_FINISHED for u in users.values()):
+    if all(u.status == UserStatus.CARD_SELECTION_FINISHED for u in users.values()):
         print("Task selection finished for all users.")
         if valid_cards_and_tasks():
             for user in users.values():
-                if user.status == UserStatus.TASK_SELECTION_FINISHED:
+                if user.status == UserStatus.CARD_SELECTION_FINISHED:
                     user.status = UserStatus.AWAITING_RESULT
+            emit("open view", "result", broadcast=True)
             start_solver()
         else:
             print(
@@ -288,7 +283,7 @@ def end_game() -> None:
         u.player_index = None
 
     card_distribution = None
-    chosen_tasks = None
+    chosen_tasks = []
     all_possible_tasks = None
     all_possible_cards = None
     all_unselected_cards = None

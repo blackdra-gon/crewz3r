@@ -189,7 +189,8 @@ def valid_order_constraints(task_list: list[Task]) -> bool:
     for task in task_list:
         if task.order_constraint in order_constraints:
             return False
-        order_constraints.append(task.order_constraint)
+        if task.order_constraint != 0:
+            order_constraints.append(task.order_constraint)
     # check for mixed absolute and relative constraints
     constraint_types: list[bool] = [
         t.relative_constraint for t in task_list if t.order_constraint

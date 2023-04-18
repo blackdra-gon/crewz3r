@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {inject, onMounted, ref} from "vue";
 import {useRouter} from "vue-router";
+import EndGameButton from "../components/EndGameButton.vue";
 
 const socket = inject('socket')
 const selected_tasks = inject('selected_tasks')
@@ -58,6 +59,7 @@ onMounted( () => {
 </script>
 
 <template>
+    <EndGameButton />
     <p>{{selected_tasks}}</p>
     <p>{{tasks_with_order}}</p>
 <p>

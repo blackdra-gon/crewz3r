@@ -2,6 +2,7 @@
 import GenericCardSelection from "../components/GenericCardSelection.vue";
 import {inject, provide, unref} from "vue";
 import {useRouter} from "vue-router";
+import EndGameButton from "../components/EndGameButton.vue";
 
 const tasks = inject('tasks');
 const selected_tasks = inject('selected_tasks')
@@ -19,9 +20,7 @@ const selection_submit = (selected_cards) => {
 
 <template>
 <div class="card_selection_view">
-        <button type="button" class="button" id="end_game_card">
-          Spiel abbrechen
-        </button>
+        <EndGameButton />
         <div class="card_deck">
           <h2>Deine Aufträge</h2>
           <p>Um Aufträge hinzu zu fügen, nutze die Eingabeleiste unten</p>

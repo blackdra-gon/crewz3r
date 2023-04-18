@@ -205,12 +205,7 @@ button {
     grid-column: -2;
 }
 
-#end_game_card, #end_game_task {
-    position: fixed;
-    right: 1rem;
-    top: 1rem;
-    background: var(--card-red);
-}
+
 
 .card_list {
     --min-width: 2em;
